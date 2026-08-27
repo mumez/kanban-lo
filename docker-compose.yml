@@ -1,0 +1,18 @@
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.caddy
+    ports:
+      - "8282:8282"
+    volumes:
+      # Caddy config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # issues directory (read/write via WebDAV)
+      - ./issues:/data/issues
+      # Built SPA
+      - ./web/dist:/srv/web:ro
+    restart: unless-stopped
+
+  # Development: start Vite dev server separately with npm run dev
+  # Build: npm run build → output to web/dist/ → served by Caddy

@@ -1,0 +1,10 @@
+# Node
+web/node_modules/
+web/dist/
+
+# Caddy data
+.caddy/
+
+# OS
+.DS_Store
+Thumbs.db

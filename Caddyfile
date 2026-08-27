@@ -1,0 +1,37 @@
+{
+	# Local development: disable HTTPS automation
+	auto_https off
+}
+
+:8282 {
+	# ----- WebDAV (issues directory) -----
+	# Map /dav/ to issues/
+	route /dav/* {
+		uri strip_prefix /dav
+
+		webdav {
+			root /data/issues
+			# Allow all methods (GET, PUT, DELETE, MOVE, MKCOL, PROPFIND, etc.)
+		}
+	}
+
+	# ----- SPA static files -----
+	route {
+		root * /srv/web
+		# Fall back to index.html for SPA client-side routing
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ----- CORS headers (for Vite dev server during development) -----
+	header {
+		Access-Control-Allow-Origin  "*"
+		Access-Control-Allow-Methods "GET, PUT, DELETE, MOVE, MKCOL, PROPFIND, PROPPATCH, OPTIONS, HEAD, COPY"
+		Access-Control-Allow-Headers "Content-Type, Depth, Overwrite, Destination, Authorization"
+		Access-Control-Expose-Headers "DAV, Content-Length, ETag"
+	}
+
+	# Respond immediately to OPTIONS preflight
+	@options method OPTIONS
+	respond @options 204
+}
