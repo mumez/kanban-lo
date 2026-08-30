@@ -7,7 +7,7 @@ A simple kanban board for local environments.
 
 - **File-based** — `.md` files under `issues/{todo,working,done,pending}/` are the issues themselves
 - **Minimal dependencies** — runs with just Docker (Caddy) and Node.js
-- **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop between columns, create/edit/delete via modal
+- **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop to reorder and move between columns, create/edit/delete via modal
 - **WebDAV** — the SPA reads and writes files over WebDAV. Issues can also be managed by manipulating files directly, without the UI
 
 ## Directory structure
@@ -45,6 +45,8 @@ Body (Markdown supported)
 
 File names follow the `{timestamp}-{slug}.md` format.
 Moving a file between column directories changes its status.
+
+Card order within a column is optional: dragging cards writes it to `issues/{column}/_order.json`, a JSON array of filenames in display order. Without that file, cards are shown in whatever order the WebDAV server lists them.
 
 ## Setup
 

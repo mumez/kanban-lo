@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
-import { DragDropProvider, DragDropSensors } from "@thisbeyond/solid-dnd";
+import { DragDropProvider, DragDropSensors, SortableProvider } from "@thisbeyond/solid-dnd";
 import IssueCard from "./IssueCard";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
@@ -15,12 +15,14 @@ const issue: Issue = {
   column: "todo",
 };
 
-// createDraggable() requires a surrounding DragDropProvider context.
+// createSortable() requires a surrounding DragDropProvider + SortableProvider context.
 function renderCard(cardIssue: Issue) {
   return render(() => (
     <DragDropProvider>
       <DragDropSensors>
-        <IssueCard issue={cardIssue} />
+        <SortableProvider ids={[cardIssue.id]}>
+          <IssueCard issue={cardIssue} />
+        </SortableProvider>
       </DragDropSensors>
     </DragDropProvider>
   ));

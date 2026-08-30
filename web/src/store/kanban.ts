@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
+import { COLUMNS } from "../types";
 import * as dav from "../services/webdav";
 
 // ----------------------------------------------------------------
@@ -95,18 +96,64 @@ async function saveIssue(id: string, subject: string, content: string) {
   });
 }
 
-/** Move an issue to another column */
+/** Move an issue to another column, appending it to the end */
 async function moveIssue(issueId: string, toColumn: Column) {
-  const idx = issues.findIndex((i) => i.id === issueId);
-  if (idx === -1) return;
-  if (issues[idx].column === toColumn) return;
+  const issue = issues.find((i) => i.id === issueId);
+  if (!issue || issue.column === toColumn) return;
+  await reorderIssue(issueId, toColumn, issuesByColumn(toColumn).length);
+}
 
-  const moved = await run(async () => {
-    return dav.moveIssue(issues[idx], toColumn);
-  });
-  if (moved) {
-    setIssues(idx, "column", toColumn);
+/**
+ * Move an issue to a specific position within a column (same column for a
+ * plain reorder, a different one when dragged across columns), and persist
+ * the affected column(s)' order to _order.json.
+ */
+async function reorderIssue(issueId: string, toColumn: Column, toIndex: number) {
+  const issue = issues.find((i) => i.id === issueId);
+  if (!issue) return;
+  const fromColumn = issue.column;
+
+  const targetIds = issuesByColumn(toColumn)
+    .map((i) => i.id)
+    .filter((id) => id !== issueId);
+  const clampedIndex = Math.max(0, Math.min(toIndex, targetIds.length));
+  targetIds.splice(clampedIndex, 0, issueId);
+
+  const sourceIds =
+    fromColumn === toColumn
+      ? targetIds
+      : issuesByColumn(fromColumn)
+          .map((i) => i.id)
+          .filter((id) => id !== issueId);
+
+  if (fromColumn === toColumn) {
+    const currentIds = issuesByColumn(toColumn).map((i) => i.id);
+    if (currentIds.join() === targetIds.join()) return; // dropped back in place
   }
+
+  await run(async () => {
+    if (fromColumn !== toColumn) {
+      await dav.moveIssue(issue, toColumn);
+    }
+
+    const byId = new Map(issues.map((i) => [i.id, i]));
+    const orderedIds = COLUMNS.flatMap((column) => {
+      if (column === toColumn) return targetIds;
+      if (column === fromColumn) return sourceIds;
+      return issuesByColumn(column).map((i) => i.id);
+    });
+    setIssues(
+      orderedIds.map((id) => {
+        const original = byId.get(id)!;
+        return id === issueId ? { ...original, column: toColumn } : original;
+      })
+    );
+
+    await dav.saveOrder(toColumn, targetIds.map((id) => `${id}.md`));
+    if (fromColumn !== toColumn) {
+      await dav.saveOrder(fromColumn, sourceIds.map((id) => `${id}.md`));
+    }
+  });
 }
 
 /** Delete an issue */
@@ -154,6 +201,7 @@ export const kanbanStore = {
   addIssue,
   saveIssue,
   moveIssue,
+  reorderIssue,
   removeIssue,
   reload,
 };

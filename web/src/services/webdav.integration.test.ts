@@ -63,4 +63,36 @@ describe("webdav service (integration)", () => {
     const byId = (i: Issue) => [inTodo.id, inDone.id].includes(i.id);
     expect(all.filter(byId)).toHaveLength(2);
   });
+
+  describe("column ordering (_order.json)", () => {
+    afterEach(async () => {
+      // Leave the column without an explicit order for other tests/manual use.
+      await dav.saveOrder("todo", []);
+    });
+
+    it("round-trips an order written with saveOrder", async () => {
+      const a = await dav.createIssue("todo", `Order A ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: a.id });
+      const b = await dav.createIssue("todo", `Order B ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+
+      await dav.saveOrder("todo", [`${b.id}.md`, `${a.id}.md`]);
+
+      expect(await dav.loadOrder("todo")).toEqual([`${b.id}.md`, `${a.id}.md`]);
+    });
+
+    it("lists issues sorted by the saved order", async () => {
+      const a = await dav.createIssue("todo", `Order A ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: a.id });
+      const b = await dav.createIssue("todo", `Order B ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+
+      await dav.saveOrder("todo", [`${b.id}.md`, `${a.id}.md`]);
+
+      const ordered = (await dav.listIssues("todo")).filter(
+        (i) => i.id === a.id || i.id === b.id
+      );
+      expect(ordered.map((i) => i.id)).toEqual([b.id, a.id]);
+    });
+  });
 });

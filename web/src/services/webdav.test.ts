@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseMarkdown, serializeMarkdown, generateId } from "./webdav";
+import { parseMarkdown, serializeMarkdown, generateId, sortByOrder } from "./webdav";
+import type { Issue } from "../types";
+
+function issue(id: string): Issue {
+  return { id, subject: id, content: "", column: "todo" };
+}
 
 describe("parseMarkdown", () => {
   it("splits the H1 subject from the body", () => {
@@ -59,5 +64,30 @@ describe("generateId", () => {
   it("falls back to 'issue' when the subject has no sluggable characters", () => {
     const id = generateId("!!!");
     expect(id).toMatch(/^\d+-issue$/);
+  });
+});
+
+describe("sortByOrder", () => {
+  it("returns issues unchanged when there is no saved order", () => {
+    const issues = [issue("a"), issue("b")];
+    expect(sortByOrder(issues, [])).toEqual(issues);
+  });
+
+  it("orders issues per the saved '{id}.md' filename list", () => {
+    const issues = [issue("a"), issue("b"), issue("c")];
+    const sorted = sortByOrder(issues, ["c.md", "a.md", "b.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("appends issues missing from the order, preserving their original relative order", () => {
+    const issues = [issue("a"), issue("b"), issue("c")];
+    const sorted = sortByOrder(issues, ["b.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["b", "a", "c"]);
+  });
+
+  it("ignores order entries for issues that no longer exist", () => {
+    const issues = [issue("a"), issue("b")];
+    const sorted = sortByOrder(issues, ["ghost.md", "b.md", "a.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["b", "a"]);
   });
 });

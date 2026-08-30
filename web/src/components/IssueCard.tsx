@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { createDraggable } from "@thisbeyond/solid-dnd";
+import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
 import { kanbanStore } from "../store/kanban";
 
@@ -8,13 +8,13 @@ interface Props {
 }
 
 const IssueCard: Component<Props> = (props) => {
-  const draggable = createDraggable(props.issue.id, () => props.issue);
+  const sortable = createSortable(props.issue.id, { subject: props.issue.subject });
 
   return (
     <div
-      use:draggable
+      use:sortable
       class="card bg-base-100 shadow-sm border border-base-300 cursor-grab active:cursor-grabbing"
-      classList={{ "opacity-50": draggable.isActiveDraggable }}
+      classList={{ "opacity-50": sortable.isActiveDraggable }}
     >
       <div class="card-body p-3 gap-2">
         {/* Title */}
