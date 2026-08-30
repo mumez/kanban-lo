@@ -52,6 +52,27 @@ describe("webdav service (integration)", () => {
     expect((await dav.listIssues("todo")).some((i) => i.id === created.id)).toBe(false);
   });
 
+  it("round-trips a project set on createIssue and preserved through updateIssue", async () => {
+    const created = await dav.createIssue(
+      "todo",
+      `Integration project ${Date.now()}`,
+      "body",
+      "project-a"
+    );
+    cleanup.push({ column: "todo", id: created.id });
+    expect(created.project).toBe("project-a");
+
+    await dav.updateIssue({ ...created, content: "updated" });
+
+    const todoIssues = await dav.listIssues("todo");
+    expect(todoIssues.find((i) => i.id === created.id)?.project).toBe("project-a");
+  });
+
+  it("loads the admin-maintained project list from _projects.json", async () => {
+    const projects = await dav.loadProjects();
+    expect(Array.isArray(projects)).toBe(true);
+  });
+
   it("aggregates issues from every column via loadAllIssues", async () => {
     const inTodo = await dav.createIssue("todo", `Integration todo ${Date.now()}`, "");
     cleanup.push({ column: "todo", id: inTodo.id });

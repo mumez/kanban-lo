@@ -34,6 +34,21 @@ describe("parseMarkdown", () => {
       content: "Just a body, no heading",
     });
   });
+
+  it("extracts the project from a YAML frontmatter block", () => {
+    expect(parseMarkdown("---\nproject: project-a\n---\n# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+      project: "project-a",
+    });
+  });
+
+  it("omits project when there is no frontmatter block", () => {
+    expect(parseMarkdown("# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+    });
+  });
 });
 
 describe("serializeMarkdown", () => {
@@ -47,6 +62,16 @@ describe("serializeMarkdown", () => {
 
   it("trims surrounding whitespace from content", () => {
     expect(serializeMarkdown("Title", "  Body  \n")).toBe("# Title\n\nBody\n");
+  });
+
+  it("prefixes a YAML frontmatter block when a project is given", () => {
+    expect(serializeMarkdown("Title", "Body", "project-a")).toBe(
+      "---\nproject: project-a\n---\n# Title\n\nBody\n"
+    );
+  });
+
+  it("omits frontmatter when no project is given", () => {
+    expect(serializeMarkdown("Title", "Body")).toBe("# Title\n\nBody\n");
   });
 });
 

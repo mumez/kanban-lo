@@ -11,7 +11,7 @@ interface Props {
 
 const KanbanColumn: Component<Props> = (props) => {
   const droppable = createDroppable(props.column);
-  const issues = () => kanbanStore.issuesByColumn(props.column);
+  const issues = () => kanbanStore.visibleIssuesByColumn(props.column);
 
   return (
     <div

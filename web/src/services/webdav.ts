@@ -18,9 +18,24 @@ function getClient(): WebDAVClient {
 // Markdown parse / serialize
 // ----------------------------------------------------------------
 
-/** "# subject\n\ncontent" → { subject, content } */
-export function parseMarkdown(text: string): { subject: string; content: string } {
-  const lines = text.split("\n");
+/** "---\nproject: x\n---\n# subject\n\ncontent" → { subject, content, project } */
+export function parseMarkdown(
+  text: string
+): { subject: string; content: string; project?: string } {
+  let body = text;
+  let project: string | undefined;
+
+  if (body.startsWith("---\n")) {
+    const end = body.indexOf("\n---", 4);
+    if (end !== -1) {
+      const frontmatter = body.slice(4, end);
+      const match = frontmatter.match(/^project:\s*(.+)$/m);
+      if (match) project = match[1].trim();
+      body = body.slice(end + 4).replace(/^\n/, "");
+    }
+  }
+
+  const lines = body.split("\n");
   let subject = "";
   let contentStart = 0;
 
@@ -39,13 +54,14 @@ export function parseMarkdown(text: string): { subject: string; content: string 
   }
 
   const content = lines.slice(contentStart).join("\n").trimEnd();
-  return { subject, content };
+  return project ? { subject, content, project } : { subject, content };
 }
 
-/** { subject, content } → Markdown text */
-export function serializeMarkdown(subject: string, content: string): string {
+/** { subject, content, project } → Markdown text */
+export function serializeMarkdown(subject: string, content: string, project?: string): string {
   const body = content.trim();
-  return body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`;
+  const frontmatter = project ? `---\nproject: ${project}\n---\n` : "";
+  return frontmatter + (body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`);
 }
 
 // ----------------------------------------------------------------
@@ -174,8 +190,8 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
-        const { subject, content } = parseMarkdown(text);
-        return { id, subject, content, column };
+        const { subject, content, project } = parseMarkdown(text);
+        return { id, subject, content, column, project };
       } catch {
         return null;
       }
@@ -190,24 +206,25 @@ export async function listIssues(column: Column): Promise<Issue[]> {
 export async function createIssue(
   column: Column,
   subject: string,
-  content: string
+  content: string,
+  project?: string
 ): Promise<Issue> {
   const client = getClient();
   const id = generateId(subject);
   const path = davPath(column, id);
-  const text = serializeMarkdown(subject, content);
+  const text = serializeMarkdown(subject, content, project);
 
   await client.putFileContents(path, text, { overwrite: false });
   await addToOrder(column, id);
 
-  return { id, subject, content, column };
+  return project ? { id, subject, content, column, project } : { id, subject, content, column };
 }
 
 /** Update an issue's content (overwrite file in the same column) */
 export async function updateIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.column, issue.id);
-  const text = serializeMarkdown(issue.subject, issue.content);
+  const text = serializeMarkdown(issue.subject, issue.content, issue.project);
   await client.putFileContents(path, text, { overwrite: true });
 }
 
@@ -235,4 +252,21 @@ export async function loadAllIssues(): Promise<Issue[]> {
   const columns: Column[] = ["todo", "working", "done", "pending"];
   const results = await Promise.all(columns.map(listIssues));
   return results.flat();
+}
+
+/**
+ * Load the admin-maintained project list from issues/_projects.json.
+ * Empty when the file is absent — the UI treats that as "no project filter".
+ */
+export async function loadProjects(): Promise<string[]> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents("/_projects.json", {
+      format: "text",
+    })) as string;
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

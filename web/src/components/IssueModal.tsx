@@ -7,6 +7,7 @@ const IssueModal: Component = () => {
   const [subject, setSubject] = createSignal("");
   const [content, setContent] = createSignal("");
   const [targetColumn, setTargetColumn] = createSignal<Column>("todo");
+  const [project, setProject] = createSignal("");
 
   // Prefill fields whenever the modal opens
   createEffect(() => {
@@ -15,10 +16,12 @@ const IssueModal: Component = () => {
         setSubject(kanbanStore.modal.issue.subject);
         setContent(kanbanStore.modal.issue.content);
         setTargetColumn(kanbanStore.modal.issue.column);
+        setProject(kanbanStore.modal.issue.project ?? "");
       } else {
         setSubject("");
         setContent("");
         setTargetColumn(kanbanStore.modal.column);
+        setProject("");
       }
     }
   });
@@ -27,16 +30,17 @@ const IssueModal: Component = () => {
     e.preventDefault();
     const s = subject().trim();
     if (!s) return;
+    const p = project() || undefined;
 
     if (kanbanStore.modal.mode === "create") {
-      await kanbanStore.addIssue(targetColumn(), s, content().trim());
+      await kanbanStore.addIssue(targetColumn(), s, content().trim(), p);
     } else if (kanbanStore.modal.issue) {
       const issue = kanbanStore.modal.issue;
       // Move first if the column changed, then update content
       if (issue.column !== targetColumn()) {
         await kanbanStore.moveIssue(issue.id, targetColumn());
       }
-      await kanbanStore.saveIssue(issue.id, s, content().trim());
+      await kanbanStore.saveIssue(issue.id, s, content().trim(), p);
     }
 
     kanbanStore.closeModal();
@@ -114,6 +118,26 @@ const IssueModal: Component = () => {
                 ))}
               </select>
             </div>
+
+            {/* Project select */}
+            <Show when={kanbanStore.projects.length > 0}>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-medium">Project</span>
+                </label>
+                <select
+                  class="select select-bordered w-full"
+                  aria-label="Project"
+                  value={project()}
+                  onChange={(e) => setProject(e.currentTarget.value)}
+                >
+                  <option value="">(none)</option>
+                  {kanbanStore.projects.map((p) => (
+                    <option value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            </Show>
 
             {/* Error display */}
             <Show when={kanbanStore.error}>

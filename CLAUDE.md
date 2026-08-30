@@ -28,12 +28,23 @@ Content (Markdown)
 ```
 Filenames follow `{epoch-ms timestamp}-{slug}.md`, e.g. `1753600000000-example-issue.md`. The H1 is the subject; everything after it (minus leading blank lines) is the content.
 
+An issue may optionally be classified under a project via a leading YAML frontmatter block:
+```markdown
+---
+project: project-a
+---
+# Subject
+
+Content (Markdown)
+```
+An issue with no frontmatter has no project and is always shown, regardless of the selected filter. The list of valid projects lives in `issues/_projects.json` (a JSON array of strings), which is admin-maintained by hand — the Web UI only reads it, to populate the project filter dropdown, and never writes it.
+
 Card order within a column is optional, per-column state kept in `issues/{column}/_order.json` — a JSON array of `"{id}.md"` filenames, most-significant-first. If the file is absent (the default), cards fall back to whatever order the WebDAV directory listing returns. Cards not listed in `_order.json` (e.g. newly created ones) sort after the listed ones, keeping their original relative order. `_order.json` is kept in sync automatically: `createIssue` appends the new id to an existing order (a no-op if the column has none yet), and `deleteIssue` removes the id from it. There's no separate rename operation — an issue's id/filename is fixed at creation and never changes when its subject is edited, so nothing to sync there.
 
 ## Architecture
 
-- `web/src/services/webdav.ts` — the only layer that talks to WebDAV. Owns the Markdown parse/serialize (`parseMarkdown`/`serializeMarkdown`), filename/slug generation (`generateId`), the `_order.json` read/write (`loadOrder`/`saveOrder`/`sortByOrder`), and all CRUD + `moveFile` calls against the `webdav` client. Requests go to `/dav/*`. `listIssues` applies `sortByOrder` before returning.
-- `web/src/store/kanban.ts` — single SolidJS store (`kanbanStore`) holding all app state: the issue list, loading/error flags, and modal state. All UI reads/mutates state through this store's exported actions (`addIssue`, `saveIssue`, `moveIssue`, `reorderIssue`, `removeIssue`, `init`, `reload`) rather than calling `webdav.ts` directly. `run()` wraps every async action to centralize loading/error handling. `reorderIssue(issueId, toColumn, toIndex)` is the one primitive for both same-column reordering and cross-column moves; it persists `_order.json` for every column it touches. `moveIssue` is a thin wrapper that calls it with an end-of-column index (used by the modal's column dropdown, where position doesn't matter).
+- `web/src/services/webdav.ts` — the only layer that talks to WebDAV. Owns the Markdown parse/serialize (`parseMarkdown`/`serializeMarkdown`, which also handle the optional `project` frontmatter), filename/slug generation (`generateId`), the `_order.json` read/write (`loadOrder`/`saveOrder`/`sortByOrder`), the read-only `_projects.json` load (`loadProjects`), and all CRUD + `moveFile` calls against the `webdav` client. Requests go to `/dav/*`. `listIssues` applies `sortByOrder` before returning.
+- `web/src/store/kanban.ts` — single SolidJS store (`kanbanStore`) holding all app state: the issue list, the project list, the selected project filter, loading/error flags, and modal state. All UI reads/mutates state through this store's exported actions (`addIssue`, `saveIssue`, `moveIssue`, `reorderIssue`, `removeIssue`, `init`, `reload`, `setSelectedProject`) rather than calling `webdav.ts` directly. `run()` wraps every async action to centralize loading/error handling. `reorderIssue(issueId, toColumn, toIndex)` is the one primitive for both same-column reordering and cross-column moves; it persists `_order.json` for every column it touches. `moveIssue` is a thin wrapper that calls it with an end-of-column index (used by the modal's column dropdown, where position doesn't matter). `issuesByColumn` always returns every issue in a column (unfiltered) since `reorderIssue` relies on it for the full per-column id list it writes to `_order.json`; `visibleIssuesByColumn` narrows that by the selected project filter and is what components render.
 - `web/src/components/` — `Board.tsx` (columns + drag-and-drop via `@thisbeyond/solid-dnd`, using `createSortable`/`SortableProvider` for reorderable cards and `closestCenter` collision detection) → `KanbanColumn.tsx` → `IssueCard.tsx`, plus `IssueModal.tsx` for create/edit driven by `kanbanStore.modal`. `Board`'s `onDragEnd` resolves the drop target's column and index (from an item id or a column's empty-area droppable) and calls `kanbanStore.reorderIssue`.
 - `web/src/types/index.ts` — the `Column` union (`todo`/`working`/`done`/`pending`) and `Issue` shape are defined once here and used throughout; column labels/colors are also centralized here.
 

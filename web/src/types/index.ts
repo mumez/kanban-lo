@@ -28,6 +28,8 @@ export interface Issue {
   content: string;
   /** Column this issue belongs to */
   column: Column;
+  /** Optional project classification, from the issue's YAML frontmatter */
+  project?: string;
 }
 
 // Modal operation mode

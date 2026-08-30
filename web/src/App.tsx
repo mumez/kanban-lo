@@ -19,6 +19,21 @@ const App: Component = () => {
         </div>
 
         <div class="navbar-end gap-2">
+          {/* Project filter */}
+          <select
+            class="select select-bordered select-sm"
+            aria-label="Filter by project"
+            value={kanbanStore.selectedProject ?? ""}
+            onChange={(e) =>
+              kanbanStore.setSelectedProject(e.currentTarget.value || null)
+            }
+          >
+            <option value="">All projects</option>
+            {kanbanStore.projects.map((project) => (
+              <option value={project}>{project}</option>
+            ))}
+          </select>
+
           {/* Loading indicator */}
           <Show when={kanbanStore.loading}>
             <span class="loading loading-spinner loading-sm text-primary" />

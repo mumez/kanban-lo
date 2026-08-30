@@ -10,11 +10,22 @@ import * as dav from "../services/webdav";
 
 const [issues, setIssues] = createStore<Issue[]>([]);
 
-/** Reload all issues from WebDAV */
+/** Reload all issues and the project list from WebDAV */
 async function reload() {
-  const all = await dav.loadAllIssues();
+  const [all, projectList] = await Promise.all([dav.loadAllIssues(), dav.loadProjects()]);
   setIssues(all);
+  setProjects(Array.isArray(projectList) ? projectList : []);
 }
+
+// ----------------------------------------------------------------
+// Project filter
+// ----------------------------------------------------------------
+
+/** Admin-maintained project list, from issues/_projects.json (read-only in the UI) */
+const [projects, setProjects] = createSignal<string[]>([]);
+
+/** Currently selected project filter; null means "all" */
+const [selectedProject, setSelectedProject] = createSignal<string | null>(null);
 
 // ----------------------------------------------------------------
 // Loading / error state
@@ -77,22 +88,22 @@ async function init() {
 }
 
 /** Create an issue */
-async function addIssue(column: Column, subject: string, content: string) {
+async function addIssue(column: Column, subject: string, content: string, project?: string) {
   await run(async () => {
-    const newIssue = await dav.createIssue(column, subject, content);
+    const newIssue = await dav.createIssue(column, subject, content, project);
     setIssues(produce((draft) => draft.push(newIssue)));
   });
 }
 
 /** Update an issue */
-async function saveIssue(id: string, subject: string, content: string) {
+async function saveIssue(id: string, subject: string, content: string, project?: string) {
   const idx = issues.findIndex((i) => i.id === id);
   if (idx === -1) return;
 
-  const updated: Issue = { ...issues[idx], subject, content };
+  const updated: Issue = { ...issues[idx], subject, content, project };
   await run(async () => {
     await dav.updateIssue(updated);
-    setIssues(idx, { subject, content });
+    setIssues(idx, { subject, content, project });
   });
 }
 
@@ -164,9 +175,21 @@ async function removeIssue(issue: Issue) {
   });
 }
 
-/** Issues filtered by column (derived getter) */
+/**
+ * Issues filtered by column (derived getter). Deliberately ignores the
+ * project filter — reorderIssue relies on this for the full per-column id
+ * list it writes to _order.json, so filtering here would drop issues hidden
+ * by the project filter from that file. Use `visibleIssuesByColumn` for
+ * rendering instead.
+ */
 function issuesByColumn(column: Column): Issue[] {
   return issues.filter((i) => i.column === column);
+}
+
+/** Issues to render for a column: issuesByColumn narrowed by the selected project filter */
+function visibleIssuesByColumn(column: Column): Issue[] {
+  const project = selectedProject();
+  return issuesByColumn(column).filter((i) => project === null || i.project === project);
 }
 
 // ----------------------------------------------------------------
@@ -187,9 +210,16 @@ export const kanbanStore = {
   get modal() {
     return modal;
   },
+  get projects() {
+    return projects();
+  },
+  get selectedProject() {
+    return selectedProject();
+  },
 
   // derived
   issuesByColumn,
+  visibleIssuesByColumn,
 
   // modal actions
   openCreateModal,
@@ -204,4 +234,5 @@ export const kanbanStore = {
   reorderIssue,
   removeIssue,
   reload,
+  setSelectedProject,
 };

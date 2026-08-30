@@ -22,6 +22,11 @@ const IssueCard: Component<Props> = (props) => {
           {props.issue.subject}
         </h3>
 
+        {/* Project badge */}
+        <Show when={props.issue.project}>
+          <span class="badge badge-ghost badge-sm self-start">{props.issue.project}</span>
+        </Show>
+
         {/* Body preview */}
         <Show when={props.issue.content}>
           <p class="text-xs text-base-content/60 line-clamp-2 whitespace-pre-line">
