@@ -7,10 +7,11 @@
 	# ----- WebDAV (issues directory) -----
 	# Map /dav/ to issues/
 	route /dav/* {
-		uri strip_prefix /dav
-
 		webdav {
 			root /data/issues
+			# prefix must match the route so MOVE's Destination header
+			# (which still carries /dav/...) resolves against the same root
+			prefix /dav
 			# Allow all methods (GET, PUT, DELETE, MOVE, MKCOL, PROPFIND, etc.)
 		}
 	}

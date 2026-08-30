@@ -87,6 +87,14 @@ npm run dev
 Open http://localhost:5173 in your browser.
 Requests to `/dav/*` are automatically proxied by Vite to `localhost:8282`.
 
+## Testing
+
+```bash
+cd web
+npm run test              # component-level unit tests
+npm run test:integration  # WebDAV integration tests (needs `docker compose up -d` running first)
+```
+
 ## WebDAV endpoints
 
 | Path | Description |

@@ -1,0 +1,67 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
+import { DragDropProvider, DragDropSensors } from "@thisbeyond/solid-dnd";
+import IssueCard from "./IssueCard";
+import { kanbanStore } from "../store/kanban";
+import * as dav from "../services/webdav";
+import type { Issue } from "../types";
+
+vi.mock("../services/webdav");
+
+const issue: Issue = {
+  id: "1-fix-bug",
+  subject: "Fix bug",
+  content: "Details here",
+  column: "todo",
+};
+
+// createDraggable() requires a surrounding DragDropProvider context.
+function renderCard(cardIssue: Issue) {
+  return render(() => (
+    <DragDropProvider>
+      <DragDropSensors>
+        <IssueCard issue={cardIssue} />
+      </DragDropSensors>
+    </DragDropProvider>
+  ));
+}
+
+describe("IssueCard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    kanbanStore.closeModal();
+  });
+
+  it("renders the subject and content", () => {
+    renderCard(issue);
+    expect(screen.getByText("Fix bug")).toBeInTheDocument();
+    expect(screen.getByText("Details here")).toBeInTheDocument();
+  });
+
+  it("opens the edit modal for this issue when Edit is clicked", () => {
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Edit"));
+    expect(kanbanStore.modal.open).toBe(true);
+    expect(kanbanStore.modal.mode).toBe("edit");
+    expect(kanbanStore.modal.issue?.id).toBe(issue.id);
+  });
+
+  it("deletes the issue when Delete is confirmed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(dav.deleteIssue).mockResolvedValue(undefined);
+
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Delete"));
+
+    await waitFor(() => expect(dav.deleteIssue).toHaveBeenCalledWith(issue));
+  });
+
+  it("does not delete the issue when the confirm dialog is dismissed", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Delete"));
+
+    expect(dav.deleteIssue).not.toHaveBeenCalled();
+  });
+});

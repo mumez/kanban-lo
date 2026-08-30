@@ -1,8 +1,9 @@
 import { createClient, type WebDAVClient, type FileStat } from "webdav";
 import type { Column, Issue } from "../types";
 
-// WebDAV base URL (/dav → Vite proxy → Caddy)
-const DAV_BASE = "/dav";
+// WebDAV base URL (/dav → Vite proxy → Caddy). Overridable so integration
+// tests can point directly at a running Caddy container.
+const DAV_BASE = import.meta.env.VITE_DAV_BASE ?? "/dav";
 
 let _client: WebDAVClient | null = null;
 
@@ -94,11 +95,14 @@ export async function listIssues(column: Column): Promise<Issue[]> {
   const issues = await Promise.all(
     mdFiles.map(async (item): Promise<Issue | null> => {
       try {
-        const text = (await client.getFileContents(item.filename, {
+        // Build the path from basename rather than trusting item.filename,
+        // which the webdav client mis-resolves when DAV_BASE has a path
+        // component (e.g. an absolute base URL used in integration tests).
+        const id = item.basename.replace(/\.md$/, "");
+        const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
         const { subject, content } = parseMarkdown(text);
-        const id = item.basename.replace(/\.md$/, "");
         return { id, subject, content, column };
       } catch {
         return null;
