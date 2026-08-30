@@ -115,3 +115,7 @@ npm run test:integration  # WebDAV integration tests (needs `docker compose up -
 | WebDAV client | [webdav](https://github.com/perry-mitchell/webdav-client) |
 | Web server | [Caddy](https://caddyserver.com) + [caddy-webdav](https://github.com/mholt/caddy-webdav) |
 | Build tool | [Vite](https://vitejs.dev) |
+
+## License
+
+MIT
