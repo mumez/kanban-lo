@@ -119,6 +119,30 @@ export function sortByOrder(issues: Issue[], order: string[]): Issue[] {
   });
 }
 
+/**
+ * Append an id to a column's saved order, keeping _order.json accurate for
+ * newly created issues. A no-op when the column has no explicit order yet —
+ * there's nothing to keep in sync, and the default (directory listing) order
+ * already surfaces the new file.
+ */
+async function addToOrder(column: Column, id: string): Promise<void> {
+  const order = await loadOrder(column);
+  if (order.length === 0) return;
+  await saveOrder(column, [...order, `${id}.md`]);
+}
+
+/**
+ * Remove an id from a column's saved order, so deleted issues don't linger
+ * as stale entries in _order.json. A no-op when the id isn't listed.
+ */
+async function removeFromOrder(column: Column, id: string): Promise<void> {
+  const order = await loadOrder(column);
+  const filtered = order.filter((filename) => filename !== `${id}.md`);
+  if (filtered.length !== order.length) {
+    await saveOrder(column, filtered);
+  }
+}
+
 // ----------------------------------------------------------------
 // WebDAV operations
 // ----------------------------------------------------------------
@@ -174,6 +198,7 @@ export async function createIssue(
   const text = serializeMarkdown(subject, content);
 
   await client.putFileContents(path, text, { overwrite: false });
+  await addToOrder(column, id);
 
   return { id, subject, content, column };
 }
@@ -202,6 +227,7 @@ export async function deleteIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.column, issue.id);
   await client.deleteFile(path);
+  await removeFromOrder(issue.column, issue.id);
 }
 
 /** Load issues from all columns */

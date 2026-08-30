@@ -28,7 +28,7 @@ Content (Markdown)
 ```
 Filenames follow `{epoch-ms timestamp}-{slug}.md`, e.g. `1753600000000-example-issue.md`. The H1 is the subject; everything after it (minus leading blank lines) is the content.
 
-Card order within a column is optional, per-column state kept in `issues/{column}/_order.json` — a JSON array of `"{id}.md"` filenames, most-significant-first. If the file is absent (the default), cards fall back to whatever order the WebDAV directory listing returns. Cards not listed in `_order.json` (e.g. newly created ones) sort after the listed ones, keeping their original relative order.
+Card order within a column is optional, per-column state kept in `issues/{column}/_order.json` — a JSON array of `"{id}.md"` filenames, most-significant-first. If the file is absent (the default), cards fall back to whatever order the WebDAV directory listing returns. Cards not listed in `_order.json` (e.g. newly created ones) sort after the listed ones, keeping their original relative order. `_order.json` is kept in sync automatically: `createIssue` appends the new id to an existing order (a no-op if the column has none yet), and `deleteIssue` removes the id from it. There's no separate rename operation — an issue's id/filename is fixed at creation and never changes when its subject is edited, so nothing to sync there.
 
 ## Architecture
 

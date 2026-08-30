@@ -95,4 +95,42 @@ describe("webdav service (integration)", () => {
       expect(ordered.map((i) => i.id)).toEqual([b.id, a.id]);
     });
   });
+
+  describe("keeping _order.json in sync", () => {
+    afterEach(async () => {
+      // Leave the column without an explicit order for other tests/manual use.
+      await dav.saveOrder("todo", []);
+    });
+
+    it("appends newly created issues to an existing order", async () => {
+      const a = await dav.createIssue("todo", `Sync A ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: a.id });
+      await dav.saveOrder("todo", [`${a.id}.md`]);
+
+      const b = await dav.createIssue("todo", `Sync B ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+
+      expect(await dav.loadOrder("todo")).toEqual([`${a.id}.md`, `${b.id}.md`]);
+    });
+
+    it("leaves the order empty when creating issues into a column with no explicit order", async () => {
+      const a = await dav.createIssue("todo", `Sync C ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: a.id });
+      const b = await dav.createIssue("todo", `Sync D ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+
+      expect(await dav.loadOrder("todo")).toEqual([]);
+    });
+
+    it("removes a deleted issue from an existing order", async () => {
+      const a = await dav.createIssue("todo", `Sync E ${Date.now()}`, "");
+      const b = await dav.createIssue("todo", `Sync F ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+      await dav.saveOrder("todo", [`${a.id}.md`, `${b.id}.md`]);
+
+      await dav.deleteIssue(a);
+
+      expect(await dav.loadOrder("todo")).toEqual([`${b.id}.md`]);
+    });
+  });
 });
