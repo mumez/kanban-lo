@@ -112,14 +112,15 @@ describe("kanbanStore project filter", () => {
     expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a", "b"]);
   });
 
-  it("visibleIssuesByColumn narrows to the selected project", async () => {
+  it("visibleIssuesByColumn narrows to the selected project and includes unclassified issues", async () => {
     const a = { ...issue("a", "todo"), project: "project-a" };
     const b = { ...issue("b", "todo"), project: "project-b" };
-    await seed([a, b], ["project-a", "project-b"]);
+    const c = issue("c", "todo"); // no project
+    await seed([a, b, c], ["project-a", "project-b"]);
 
     kanbanStore.setSelectedProject("project-a");
 
-    expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a"]);
+    expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a", "c"]);
   });
 
   it("issuesByColumn (used for _order.json bookkeeping) ignores the project filter", async () => {

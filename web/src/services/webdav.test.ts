@@ -43,6 +43,16 @@ describe("parseMarkdown", () => {
     });
   });
 
+  it("handles CRLF line endings when parsing frontmatter", () => {
+    expect(
+      parseMarkdown("---\r\nproject: project-a\r\n---\r\n# Title\r\n\r\nBody")
+    ).toEqual({
+      subject: "Title",
+      content: "Body",
+      project: "project-a",
+    });
+  });
+
   it("omits project when there is no frontmatter block", () => {
     expect(parseMarkdown("# Title\n\nBody")).toEqual({
       subject: "Title",

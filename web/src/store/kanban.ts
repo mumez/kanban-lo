@@ -208,10 +208,10 @@ function issuesByColumn(column: Column): Issue[] {
   return issues.filter((i) => i.column === column);
 }
 
-/** Issues to render for a column: issuesByColumn narrowed by the selected project filter */
+/** Issues to render for a column: issuesByColumn narrowed by the selected project filter. Unclassified issues (no project) are always shown. */
 function visibleIssuesByColumn(column: Column): Issue[] {
   const project = selectedProject();
-  return issuesByColumn(column).filter((i) => project === null || i.project === project);
+  return issuesByColumn(column).filter((i) => project === null || !i.project || i.project === project);
 }
 
 // ----------------------------------------------------------------

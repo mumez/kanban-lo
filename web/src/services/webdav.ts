@@ -22,7 +22,7 @@ function getClient(): WebDAVClient {
 export function parseMarkdown(
   text: string
 ): { subject: string; content: string; project?: string } {
-  let body = text;
+  let body = text.replace(/\r\n/g, "\n");
   let project: string | undefined;
 
   if (body.startsWith("---\n")) {

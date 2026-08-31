@@ -34,3 +34,15 @@ export interface Issue {
 
 // Modal operation mode
 export type ModalMode = "create" | "edit";
+
+// SolidJS custom directive types for @thisbeyond/solid-dnd
+declare module "solid-js" {
+  namespace JSX {
+    interface Directives {
+      sortable: any;
+      droppable: any;
+      draggable: any;
+    }
+  }
+}
+
