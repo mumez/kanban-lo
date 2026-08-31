@@ -32,12 +32,20 @@ describe("IssueCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     kanbanStore.closeModal();
+    kanbanStore.closeViewModal();
   });
 
   it("renders the subject and content", () => {
     renderCard(issue);
     expect(screen.getByText("Fix bug")).toBeInTheDocument();
     expect(screen.getByText("Details here")).toBeInTheDocument();
+  });
+
+  it("opens the view modal for this issue when View is clicked", () => {
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("View"));
+    expect(kanbanStore.viewModal.open).toBe(true);
+    expect(kanbanStore.viewModal.issue?.id).toBe(issue.id);
   });
 
   it("opens the edit modal for this issue when Edit is clicked", () => {

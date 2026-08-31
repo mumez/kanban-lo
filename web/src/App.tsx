@@ -1,11 +1,24 @@
-import { type Component, onMount, Show } from "solid-js";
+import { type Component, onMount, onCleanup, Show } from "solid-js";
 import { kanbanStore } from "./store/kanban";
 import Board from "./components/Board";
 import IssueModal from "./components/IssueModal";
+import IssueViewModal from "./components/IssueViewModal";
 
 const App: Component = () => {
   onMount(() => {
     kanbanStore.init();
+
+    // Refetch on return to the tab, so edits made elsewhere (or directly on
+    // disk) while it was hidden aren't silently stale.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        kanbanStore.reload();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    onCleanup(() => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    });
   });
 
   return (
@@ -81,6 +94,9 @@ const App: Component = () => {
 
       {/* Issue create / edit modal */}
       <IssueModal />
+
+      {/* Read-only rendered Markdown view */}
+      <IssueViewModal />
     </div>
   );
 };

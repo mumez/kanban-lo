@@ -79,6 +79,28 @@ function closeModal() {
 }
 
 // ----------------------------------------------------------------
+// View modal state (read-only, rendered Markdown)
+// ----------------------------------------------------------------
+
+interface ViewModalState {
+  open: boolean;
+  issue: Issue | null;
+}
+
+const [viewModal, setViewModal] = createStore<ViewModalState>({
+  open: false,
+  issue: null,
+});
+
+function openViewModal(issue: Issue) {
+  setViewModal({ open: true, issue });
+}
+
+function closeViewModal() {
+  setViewModal({ open: false });
+}
+
+// ----------------------------------------------------------------
 // Actions
 // ----------------------------------------------------------------
 
@@ -210,6 +232,9 @@ export const kanbanStore = {
   get modal() {
     return modal;
   },
+  get viewModal() {
+    return viewModal;
+  },
   get projects() {
     return projects();
   },
@@ -225,6 +250,8 @@ export const kanbanStore = {
   openCreateModal,
   openEditModal,
   closeModal,
+  openViewModal,
+  closeViewModal,
 
   // data actions
   init,
