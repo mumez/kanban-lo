@@ -1,5 +1,5 @@
 import { type Component, For, Show } from "solid-js";
-import { createDroppable } from "@thisbeyond/solid-dnd";
+import { createDroppable, SortableProvider } from "@thisbeyond/solid-dnd";
 import type { Column } from "../types";
 import { COLUMN_LABELS, COLUMN_COLORS } from "../types";
 import { kanbanStore } from "../store/kanban";
@@ -11,7 +11,7 @@ interface Props {
 
 const KanbanColumn: Component<Props> = (props) => {
   const droppable = createDroppable(props.column);
-  const issues = () => kanbanStore.issuesByColumn(props.column);
+  const issues = () => kanbanStore.visibleIssuesByColumn(props.column);
 
   return (
     <div
@@ -45,9 +45,11 @@ const KanbanColumn: Component<Props> = (props) => {
 
       {/* Issue card list */}
       <div class="flex flex-col gap-2 flex-1">
-        <For each={issues()}>
-          {(issue) => <IssueCard issue={issue} />}
-        </For>
+        <SortableProvider ids={issues().map((issue) => issue.id)}>
+          <For each={issues()}>
+            {(issue) => <IssueCard issue={issue} />}
+          </For>
+        </SortableProvider>
 
         {/* Empty drop zone hint */}
         <Show when={issues().length === 0}>

@@ -18,9 +18,24 @@ function getClient(): WebDAVClient {
 // Markdown parse / serialize
 // ----------------------------------------------------------------
 
-/** "# subject\n\ncontent" → { subject, content } */
-export function parseMarkdown(text: string): { subject: string; content: string } {
-  const lines = text.split("\n");
+/** "---\nproject: x\n---\n# subject\n\ncontent" → { subject, content, project } */
+export function parseMarkdown(
+  text: string
+): { subject: string; content: string; project?: string } {
+  let body = text.replace(/\r\n/g, "\n");
+  let project: string | undefined;
+
+  if (body.startsWith("---\n")) {
+    const end = body.indexOf("\n---", 4);
+    if (end !== -1) {
+      const frontmatter = body.slice(4, end);
+      const match = frontmatter.match(/^project:\s*(.+)$/m);
+      if (match) project = match[1].trim();
+      body = body.slice(end + 4).replace(/^\n/, "");
+    }
+  }
+
+  const lines = body.split("\n");
   let subject = "";
   let contentStart = 0;
 
@@ -39,13 +54,14 @@ export function parseMarkdown(text: string): { subject: string; content: string 
   }
 
   const content = lines.slice(contentStart).join("\n").trimEnd();
-  return { subject, content };
+  return project ? { subject, content, project } : { subject, content };
 }
 
-/** { subject, content } → Markdown text */
-export function serializeMarkdown(subject: string, content: string): string {
+/** { subject, content, project } → Markdown text */
+export function serializeMarkdown(subject: string, content: string, project?: string): string {
   const body = content.trim();
-  return body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`;
+  const frontmatter = project ? `---\nproject: ${project}\n---\n` : "";
+  return frontmatter + (body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`);
 }
 
 // ----------------------------------------------------------------
@@ -72,10 +88,82 @@ function davPath(column: Column, id: string): string {
 }
 
 // ----------------------------------------------------------------
+// Column ordering (_order.json)
+// ----------------------------------------------------------------
+
+const ORDER_FILENAME = "_order.json";
+
+function orderPath(column: Column): string {
+  return `/${column}/${ORDER_FILENAME}`;
+}
+
+/** Load the saved card order for a column, as "{id}.md" filenames. Empty when no _order.json exists. */
+export async function loadOrder(column: Column): Promise<string[]> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents(orderPath(column), {
+      format: "text",
+    })) as string;
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    // No order file yet, or it's unreadable/invalid — fall back to default order.
+    return [];
+  }
+}
+
+/** Persist the card order for a column, as "{id}.md" filenames */
+export async function saveOrder(column: Column, filenames: string[]): Promise<void> {
+  const client = getClient();
+  await client.putFileContents(orderPath(column), JSON.stringify(filenames), {
+    overwrite: true,
+  });
+}
+
+/**
+ * Sort issues by a saved "{id}.md" filename order. Issues not listed in
+ * `order` (e.g. newly created ones, or when there's no _order.json at all)
+ * keep their original relative order, after the ordered ones.
+ */
+export function sortByOrder(issues: Issue[], order: string[]): Issue[] {
+  if (order.length === 0) return issues;
+
+  const rank = new Map(order.map((filename, i) => [filename.replace(/\.md$/, ""), i]));
+  return [...issues].sort((a, b) => {
+    const rankOf = (issue: Issue) => rank.get(issue.id) ?? Infinity;
+    return rankOf(a) - rankOf(b);
+  });
+}
+
+/**
+ * Append an id to a column's saved order, keeping _order.json accurate for
+ * newly created issues. A no-op when the column has no explicit order yet —
+ * there's nothing to keep in sync, and the default (directory listing) order
+ * already surfaces the new file.
+ */
+async function addToOrder(column: Column, id: string): Promise<void> {
+  const order = await loadOrder(column);
+  if (order.length === 0) return;
+  await saveOrder(column, [...order, `${id}.md`]);
+}
+
+/**
+ * Remove an id from a column's saved order, so deleted issues don't linger
+ * as stale entries in _order.json. A no-op when the id isn't listed.
+ */
+async function removeFromOrder(column: Column, id: string): Promise<void> {
+  const order = await loadOrder(column);
+  const filtered = order.filter((filename) => filename !== `${id}.md`);
+  if (filtered.length !== order.length) {
+    await saveOrder(column, filtered);
+  }
+}
+
+// ----------------------------------------------------------------
 // WebDAV operations
 // ----------------------------------------------------------------
 
-/** List all issues in a column */
+/** List all issues in a column, sorted per the column's _order.json (if any) */
 export async function listIssues(column: Column): Promise<Issue[]> {
   const client = getClient();
 
@@ -102,38 +190,41 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
-        const { subject, content } = parseMarkdown(text);
-        return { id, subject, content, column };
+        const { subject, content, project } = parseMarkdown(text);
+        return { id, subject, content, column, project };
       } catch {
         return null;
       }
     })
   );
 
-  return issues.filter((i): i is Issue => i !== null);
+  const order = await loadOrder(column);
+  return sortByOrder(issues.filter((i): i is Issue => i !== null), order);
 }
 
 /** Create a new issue */
 export async function createIssue(
   column: Column,
   subject: string,
-  content: string
+  content: string,
+  project?: string
 ): Promise<Issue> {
   const client = getClient();
   const id = generateId(subject);
   const path = davPath(column, id);
-  const text = serializeMarkdown(subject, content);
+  const text = serializeMarkdown(subject, content, project);
 
   await client.putFileContents(path, text, { overwrite: false });
+  await addToOrder(column, id);
 
-  return { id, subject, content, column };
+  return project ? { id, subject, content, column, project } : { id, subject, content, column };
 }
 
 /** Update an issue's content (overwrite file in the same column) */
 export async function updateIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.column, issue.id);
-  const text = serializeMarkdown(issue.subject, issue.content);
+  const text = serializeMarkdown(issue.subject, issue.content, issue.project);
   await client.putFileContents(path, text, { overwrite: true });
 }
 
@@ -153,6 +244,7 @@ export async function deleteIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.column, issue.id);
   await client.deleteFile(path);
+  await removeFromOrder(issue.column, issue.id);
 }
 
 /** Load issues from all columns */
@@ -160,4 +252,21 @@ export async function loadAllIssues(): Promise<Issue[]> {
   const columns: Column[] = ["todo", "working", "done", "pending"];
   const results = await Promise.all(columns.map(listIssues));
   return results.flat();
+}
+
+/**
+ * Load the admin-maintained project list from issues/_projects.json.
+ * Empty when the file is absent — the UI treats that as "no project filter".
+ */
+export async function loadProjects(): Promise<string[]> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents("/_projects.json", {
+      format: "text",
+    })) as string;
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseMarkdown, serializeMarkdown, generateId } from "./webdav";
+import { parseMarkdown, serializeMarkdown, generateId, sortByOrder } from "./webdav";
+import type { Issue } from "../types";
+
+function issue(id: string): Issue {
+  return { id, subject: id, content: "", column: "todo" };
+}
 
 describe("parseMarkdown", () => {
   it("splits the H1 subject from the body", () => {
@@ -29,6 +34,31 @@ describe("parseMarkdown", () => {
       content: "Just a body, no heading",
     });
   });
+
+  it("extracts the project from a YAML frontmatter block", () => {
+    expect(parseMarkdown("---\nproject: project-a\n---\n# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+      project: "project-a",
+    });
+  });
+
+  it("handles CRLF line endings when parsing frontmatter", () => {
+    expect(
+      parseMarkdown("---\r\nproject: project-a\r\n---\r\n# Title\r\n\r\nBody")
+    ).toEqual({
+      subject: "Title",
+      content: "Body",
+      project: "project-a",
+    });
+  });
+
+  it("omits project when there is no frontmatter block", () => {
+    expect(parseMarkdown("# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+    });
+  });
 });
 
 describe("serializeMarkdown", () => {
@@ -42,6 +72,16 @@ describe("serializeMarkdown", () => {
 
   it("trims surrounding whitespace from content", () => {
     expect(serializeMarkdown("Title", "  Body  \n")).toBe("# Title\n\nBody\n");
+  });
+
+  it("prefixes a YAML frontmatter block when a project is given", () => {
+    expect(serializeMarkdown("Title", "Body", "project-a")).toBe(
+      "---\nproject: project-a\n---\n# Title\n\nBody\n"
+    );
+  });
+
+  it("omits frontmatter when no project is given", () => {
+    expect(serializeMarkdown("Title", "Body")).toBe("# Title\n\nBody\n");
   });
 });
 
@@ -59,5 +99,30 @@ describe("generateId", () => {
   it("falls back to 'issue' when the subject has no sluggable characters", () => {
     const id = generateId("!!!");
     expect(id).toMatch(/^\d+-issue$/);
+  });
+});
+
+describe("sortByOrder", () => {
+  it("returns issues unchanged when there is no saved order", () => {
+    const issues = [issue("a"), issue("b")];
+    expect(sortByOrder(issues, [])).toEqual(issues);
+  });
+
+  it("orders issues per the saved '{id}.md' filename list", () => {
+    const issues = [issue("a"), issue("b"), issue("c")];
+    const sorted = sortByOrder(issues, ["c.md", "a.md", "b.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("appends issues missing from the order, preserving their original relative order", () => {
+    const issues = [issue("a"), issue("b"), issue("c")];
+    const sorted = sortByOrder(issues, ["b.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["b", "a", "c"]);
+  });
+
+  it("ignores order entries for issues that no longer exist", () => {
+    const issues = [issue("a"), issue("b")];
+    const sorted = sortByOrder(issues, ["ghost.md", "b.md", "a.md"]);
+    expect(sorted.map((i) => i.id)).toEqual(["b", "a"]);
   });
 });

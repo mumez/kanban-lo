@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { createDraggable } from "@thisbeyond/solid-dnd";
+import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
 import { kanbanStore } from "../store/kanban";
 
@@ -8,19 +8,24 @@ interface Props {
 }
 
 const IssueCard: Component<Props> = (props) => {
-  const draggable = createDraggable(props.issue.id, () => props.issue);
+  const sortable = createSortable(props.issue.id, { subject: props.issue.subject });
 
   return (
     <div
-      use:draggable
+      use:sortable
       class="card bg-base-100 shadow-sm border border-base-300 cursor-grab active:cursor-grabbing"
-      classList={{ "opacity-50": draggable.isActiveDraggable }}
+      classList={{ "opacity-50": sortable.isActiveDraggable }}
     >
       <div class="card-body p-3 gap-2">
         {/* Title */}
         <h3 class="card-title text-sm font-semibold leading-snug break-words">
           {props.issue.subject}
         </h3>
+
+        {/* Project badge */}
+        <Show when={props.issue.project}>
+          <span class="badge badge-ghost badge-sm self-start">{props.issue.project}</span>
+        </Show>
 
         {/* Body preview */}
         <Show when={props.issue.content}>
@@ -31,6 +36,19 @@ const IssueCard: Component<Props> = (props) => {
 
         {/* Action buttons */}
         <div class="card-actions justify-end mt-1">
+          <button
+            class="btn btn-ghost btn-xs"
+            title="View"
+            onClick={(e) => {
+              e.stopPropagation();
+              kanbanStore.openViewModal(props.issue);
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
           <button
             class="btn btn-ghost btn-xs"
             title="Edit"

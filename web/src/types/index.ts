@@ -28,7 +28,21 @@ export interface Issue {
   content: string;
   /** Column this issue belongs to */
   column: Column;
+  /** Optional project classification, from the issue's YAML frontmatter */
+  project?: string;
 }
 
 // Modal operation mode
 export type ModalMode = "create" | "edit";
+
+// SolidJS custom directive types for @thisbeyond/solid-dnd
+declare module "solid-js" {
+  namespace JSX {
+    interface Directives {
+      sortable: any;
+      droppable: any;
+      draggable: any;
+    }
+  }
+}
+

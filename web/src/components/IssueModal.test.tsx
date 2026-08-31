@@ -46,7 +46,12 @@ describe("IssueModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
-      expect(dav.createIssue).toHaveBeenCalledWith("todo", "Test issue", "Some details")
+      expect(dav.createIssue).toHaveBeenCalledWith(
+        "todo",
+        "Test issue",
+        "Some details",
+        undefined
+      )
     );
     await waitFor(() => expect(kanbanStore.modal.open).toBe(false));
   });
@@ -94,5 +99,47 @@ describe("IssueModal", () => {
 
     await waitFor(() => expect(dav.moveIssue).toHaveBeenCalledWith(issue, "done"));
     await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+  });
+
+  it("submits the selected project when a project list is available", async () => {
+    vi.mocked(dav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(dav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+    await kanbanStore.reload();
+
+    vi.mocked(dav.createIssue).mockResolvedValue({
+      id: "1",
+      subject: "Test issue",
+      content: "",
+      column: "todo",
+      project: "project-b",
+    });
+
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByPlaceholderText("Enter issue title..."), {
+      target: { value: "Test issue" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Project" }), { target: { value: "project-b" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(dav.createIssue).toHaveBeenCalledWith("todo", "Test issue", "", "project-b")
+    );
+  });
+
+  it("prefills the project select with the issue's project when editing", async () => {
+    vi.mocked(dav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "",
+      column: "working",
+      project: "project-a",
+    };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    expect(screen.getByRole("combobox", { name: "Project" })).toHaveValue("project-a");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
-import { DragDropProvider, DragDropSensors } from "@thisbeyond/solid-dnd";
+import { DragDropProvider, DragDropSensors, SortableProvider } from "@thisbeyond/solid-dnd";
 import IssueCard from "./IssueCard";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
@@ -15,12 +15,14 @@ const issue: Issue = {
   column: "todo",
 };
 
-// createDraggable() requires a surrounding DragDropProvider context.
+// createSortable() requires a surrounding DragDropProvider + SortableProvider context.
 function renderCard(cardIssue: Issue) {
   return render(() => (
     <DragDropProvider>
       <DragDropSensors>
-        <IssueCard issue={cardIssue} />
+        <SortableProvider ids={[cardIssue.id]}>
+          <IssueCard issue={cardIssue} />
+        </SortableProvider>
       </DragDropSensors>
     </DragDropProvider>
   ));
@@ -30,12 +32,20 @@ describe("IssueCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     kanbanStore.closeModal();
+    kanbanStore.closeViewModal();
   });
 
   it("renders the subject and content", () => {
     renderCard(issue);
     expect(screen.getByText("Fix bug")).toBeInTheDocument();
     expect(screen.getByText("Details here")).toBeInTheDocument();
+  });
+
+  it("opens the view modal for this issue when View is clicked", () => {
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("View"));
+    expect(kanbanStore.viewModal.open).toBe(true);
+    expect(kanbanStore.viewModal.issue?.id).toBe(issue.id);
   });
 
   it("opens the edit modal for this issue when Edit is clicked", () => {
