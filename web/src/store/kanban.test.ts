@@ -148,6 +148,33 @@ describe("kanbanStore project filter", () => {
 
     expect(freshStore.selectedProject).toBe("project-b");
   });
+
+  it("keeps a restored project selection that is still in the project list on reload", async () => {
+    localStorage.setItem("kanban-lo:selectedProject", "project-b");
+    vi.resetModules();
+    const { kanbanStore: freshStore } = await import("./kanban");
+    const freshDav = await import("../services/webdav");
+    vi.mocked(freshDav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(freshDav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+
+    await freshStore.reload();
+
+    expect(freshStore.selectedProject).toBe("project-b");
+  });
+
+  it("clears a restored project selection that is no longer in the project list on reload", async () => {
+    localStorage.setItem("kanban-lo:selectedProject", "project-x");
+    vi.resetModules();
+    const { kanbanStore: freshStore } = await import("./kanban");
+    const freshDav = await import("../services/webdav");
+    vi.mocked(freshDav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(freshDav.loadProjects).mockResolvedValue(["project-a"]);
+
+    await freshStore.reload();
+
+    expect(freshStore.selectedProject).toBeNull();
+    expect(localStorage.getItem("kanban-lo:selectedProject")).toBeNull();
+  });
 });
 
 describe("kanbanStore search filter", () => {

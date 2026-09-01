@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
 import { COLUMNS } from "../types";
@@ -14,7 +14,12 @@ const [issues, setIssues] = createStore<Issue[]>([]);
 async function reload() {
   const [all, projectList] = await Promise.all([dav.loadAllIssues(), dav.loadProjects()]);
   setIssues(all);
-  setProjects(Array.isArray(projectList) ? projectList : []);
+  const list = Array.isArray(projectList) ? projectList : [];
+  setProjects(list);
+  const selected = selectedProject();
+  if (selected !== null && !list.includes(selected)) {
+    setSelectedProject(null);
+  }
 }
 
 // ----------------------------------------------------------------
@@ -59,10 +64,12 @@ function setSelectedProject(project: string | null) {
 /** Substring filter over subject/content, applied client-side only; empty string means "no filter" */
 const [searchQuery, setSearchQuery] = createSignal("");
 
-function matchesSearchQuery(issue: Issue, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return issue.subject.toLowerCase().includes(q) || issue.content.toLowerCase().includes(q);
+function matchesSearchQuery(issue: Issue, lowercasedQuery: string): boolean {
+  if (!lowercasedQuery) return true;
+  return (
+    issue.subject.toLowerCase().includes(lowercasedQuery) ||
+    issue.content.toLowerCase().includes(lowercasedQuery)
+  );
 }
 
 // ----------------------------------------------------------------
@@ -246,13 +253,28 @@ function issuesByColumn(column: Column): Issue[] {
   return issues.filter((i) => i.status === column);
 }
 
-/** Issues to render for a column: issuesByColumn narrowed by the selected project filter and search query. Unclassified issues (no project) are always shown regardless of the project filter. */
+/**
+ * Issues to render for a column: issuesByColumn narrowed by the selected
+ * project filter and search query. Unclassified issues (no project) are
+ * always shown regardless of the project filter. One memo per column so the
+ * filter runs once per change, even though each column reads it from several
+ * reactive sites.
+ */
+const visibleByColumn = Object.fromEntries(
+  COLUMNS.map((column) => [
+    column,
+    createMemo(() => {
+      const project = selectedProject();
+      const query = searchQuery().toLowerCase();
+      return issuesByColumn(column).filter(
+        (i) => (project === null || !i.project || i.project === project) && matchesSearchQuery(i, query)
+      );
+    }),
+  ])
+) as Record<Column, Accessor<Issue[]>>;
+
 function visibleIssuesByColumn(column: Column): Issue[] {
-  const project = selectedProject();
-  const query = searchQuery();
-  return issuesByColumn(column).filter(
-    (i) => (project === null || !i.project || i.project === project) && matchesSearchQuery(i, query)
-  );
+  return visibleByColumn[column]();
 }
 
 // ----------------------------------------------------------------
