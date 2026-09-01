@@ -24,3 +24,23 @@ run = "npm run build"
 description = "Build the web SPA and start the Caddy server (WebDAV + static)"
 depends = ["build-web"]
 run = "docker compose up --build"
+
+[tasks.list-issues]
+description = "kbl list-issues -- list issues in a column (e.g. mise run list-issues -- --status todo --max 10)"
+dir = "scripts"
+run = "npx tsx src/cli.ts list-issues"
+
+[tasks.fetch-issue]
+description = "kbl fetch-issue -- fetch an issue by id (e.g. mise run fetch-issue -- --id <id>)"
+dir = "scripts"
+run = "npx tsx src/cli.ts fetch-issue"
+
+[tasks.change-issue]
+description = "kbl change-issue -- change an issue's status/content (e.g. mise run change-issue -- --id <id> --status done)"
+dir = "scripts"
+run = "npx tsx src/cli.ts change-issue"
+
+[tasks.create-issue]
+description = "kbl create-issue -- create a new issue (e.g. mise run create-issue -- --subject 'new subject')"
+dir = "scripts"
+run = "npx tsx src/cli.ts create-issue"
