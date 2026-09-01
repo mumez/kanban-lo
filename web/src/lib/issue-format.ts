@@ -1,5 +1,6 @@
 // Kanban column definitions
 export type Column = "todo" | "working" | "done" | "pending";
+export const COLUMNS: Column[] = ["todo", "working", "done", "pending"];
 
 // Issue type
 export interface Issue {
@@ -99,7 +100,11 @@ export function sortByOrder(issues: Issue[], order: string[]): Issue[] {
 
   const rank = new Map(order.map((filename, i) => [filename.replace(/\.md$/, ""), i]));
   return [...issues].sort((a, b) => {
-    const rankOf = (issue: Issue) => rank.get(issue.id) ?? Infinity;
-    return rankOf(a) - rankOf(b);
+    const rankA = rank.get(a.id);
+    const rankB = rank.get(b.id);
+    if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
+    if (rankA !== undefined) return -1;
+    if (rankB !== undefined) return 1;
+    return 0;
   });
 }

@@ -1,9 +1,8 @@
 // Column/Issue live in lib/issue-format.ts (framework-agnostic, reused by
 // scripts/kbl) — re-exported here for existing app-side imports.
 export type { Column, Issue } from "../lib/issue-format";
+export { COLUMNS } from "../lib/issue-format";
 import type { Column } from "../lib/issue-format";
-
-export const COLUMNS: Column[] = ["todo", "working", "done", "pending"];
 
 export const COLUMN_LABELS: Record<Column, string> = {
   todo: "Todo",

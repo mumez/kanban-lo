@@ -2,6 +2,7 @@ import { createClient, type WebDAVClient, type FileStat } from "webdav";
 import {
   type Column,
   type Issue,
+  COLUMNS,
   parseMarkdown,
   serializeMarkdown,
   generateId,
@@ -9,7 +10,7 @@ import {
   ORDER_FILENAME,
 } from "../../web/src/lib/issue-format";
 
-export const COLUMNS: Column[] = ["todo", "working", "done", "pending"];
+export { COLUMNS };
 
 const DEFAULT_DAV_BASE = "http://localhost:8282/dav";
 
@@ -125,18 +126,20 @@ export async function listIssues(column: Column): Promise<Issue[]> {
 /** Find a single issue by id across all columns. Returns null if not found. */
 export async function getIssue(id: string): Promise<Issue | null> {
   const client = getClient();
-  for (const column of COLUMNS) {
-    try {
-      const text = (await client.getFileContents(davPath(column, id), {
-        format: "text",
-      })) as string;
-      const { subject, content, project } = parseMarkdown(text);
-      return { id, subject, content, column, project };
-    } catch {
-      // Not in this column; keep looking.
-    }
-  }
-  return null;
+  const results = await Promise.all(
+    COLUMNS.map(async (column) => {
+      try {
+        const text = (await client.getFileContents(davPath(column, id), {
+          format: "text",
+        })) as string;
+        const { subject, content, project } = parseMarkdown(text);
+        return { id, subject, content, column, project } as Issue;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return results.find((issue): issue is Issue => issue !== null) ?? null;
 }
 
 /** Create a new issue */
