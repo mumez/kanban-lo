@@ -21,7 +21,7 @@ const IssueModal: Component = () => {
         setSubject("");
         setContent("");
         setTargetColumn(kanbanStore.modal.column);
-        setProject("");
+        setProject(kanbanStore.selectedProject ?? "");
       }
     }
   });

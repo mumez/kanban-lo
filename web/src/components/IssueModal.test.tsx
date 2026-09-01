@@ -19,6 +19,7 @@ describe("IssueModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     kanbanStore.closeModal();
+    kanbanStore.setSelectedProject(null);
   });
 
   it("is not rendered when the modal is closed", () => {
@@ -126,6 +127,18 @@ describe("IssueModal", () => {
     await waitFor(() =>
       expect(dav.createIssue).toHaveBeenCalledWith("todo", "Test issue", "", "project-b")
     );
+  });
+
+  it("prefills the project select with the active project filter when creating", async () => {
+    vi.mocked(dav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(dav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+    await kanbanStore.reload();
+    kanbanStore.setSelectedProject("project-b");
+
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    expect(screen.getByRole("combobox", { name: "Project" })).toHaveValue("project-b");
   });
 
   it("prefills the project select with the issue's project when editing", async () => {
