@@ -24,8 +24,46 @@ async function reload() {
 /** Admin-maintained project list, from issues/_projects.json (read-only in the UI) */
 const [projects, setProjects] = createSignal<string[]>([]);
 
-/** Currently selected project filter; null means "all" */
-const [selectedProject, setSelectedProject] = createSignal<string | null>(null);
+const SELECTED_PROJECT_STORAGE_KEY = "kanban-lo:selectedProject";
+
+function loadStoredSelectedProject(): string | null {
+  try {
+    return localStorage.getItem(SELECTED_PROJECT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Currently selected project filter; null means "all". Persisted to localStorage so it survives a reload. */
+const [selectedProject, setSelectedProjectSignal] = createSignal<string | null>(
+  loadStoredSelectedProject()
+);
+
+function setSelectedProject(project: string | null) {
+  setSelectedProjectSignal(project);
+  try {
+    if (project === null) {
+      localStorage.removeItem(SELECTED_PROJECT_STORAGE_KEY);
+    } else {
+      localStorage.setItem(SELECTED_PROJECT_STORAGE_KEY, project);
+    }
+  } catch {
+    // localStorage unavailable (e.g. disabled/private browsing) — selection just won't persist
+  }
+}
+
+// ----------------------------------------------------------------
+// Text search filter
+// ----------------------------------------------------------------
+
+/** Substring filter over subject/content, applied client-side only; empty string means "no filter" */
+const [searchQuery, setSearchQuery] = createSignal("");
+
+function matchesSearchQuery(issue: Issue, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return issue.subject.toLowerCase().includes(q) || issue.content.toLowerCase().includes(q);
+}
 
 // ----------------------------------------------------------------
 // Loading / error state
@@ -208,10 +246,13 @@ function issuesByColumn(column: Column): Issue[] {
   return issues.filter((i) => i.status === column);
 }
 
-/** Issues to render for a column: issuesByColumn narrowed by the selected project filter. Unclassified issues (no project) are always shown. */
+/** Issues to render for a column: issuesByColumn narrowed by the selected project filter and search query. Unclassified issues (no project) are always shown regardless of the project filter. */
 function visibleIssuesByColumn(column: Column): Issue[] {
   const project = selectedProject();
-  return issuesByColumn(column).filter((i) => project === null || !i.project || i.project === project);
+  const query = searchQuery();
+  return issuesByColumn(column).filter(
+    (i) => (project === null || !i.project || i.project === project) && matchesSearchQuery(i, query)
+  );
 }
 
 // ----------------------------------------------------------------
@@ -241,6 +282,9 @@ export const kanbanStore = {
   get selectedProject() {
     return selectedProject();
   },
+  get searchQuery() {
+    return searchQuery();
+  },
 
   // derived
   issuesByColumn,
@@ -262,4 +306,5 @@ export const kanbanStore = {
   removeIssue,
   reload,
   setSelectedProject,
+  setSearchQuery,
 };
