@@ -9,6 +9,7 @@ A simple kanban board for local environments.
 - **Minimal dependencies** — runs with just Docker (Caddy) and Node.js
 - **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop to reorder and move between columns, create/edit/delete via modal
 - **WebDAV** — the SPA reads and writes files over WebDAV. Issues can also be managed by manipulating files directly, without the UI
+- **Admin CLI** — `kbl` (in `scripts/`) manages issues over WebDAV from the command line, for admins or coding agents
 
 ## Directory structure
 
@@ -29,6 +30,11 @@ kanban-lo/
 │   │   └── components/
 │   ├── package.json
 │   └── vite.config.ts
+├── scripts/            # kbl admin CLI (Node + TypeScript)
+│   └── src/
+│       ├── cli.ts        # subcommand wiring
+│       ├── webdavClient.ts # WebDAV client for the CLI
+│       └── commands/
 ├── docker/
 │   └── Dockerfile.caddy  # xcaddy + caddy-webdav
 ├── Caddyfile
@@ -89,12 +95,38 @@ npm run dev
 Open http://localhost:5173 in your browser.
 Requests to `/dav/*` are automatically proxied by Vite to `localhost:8282`.
 
+## Admin CLI (kbl)
+
+`scripts/` is a standalone Node + TypeScript project providing `kbl`, a CLI that manages issues over WebDAV (no build step, run via `tsx`). Useful for admins or coding agents that need to inspect/manipulate issues without the browser UI.
+
+```bash
+cd scripts
+npm install
+
+# Point at your WebDAV server (defaults to http://localhost:8282/dav)
+export KBL_DAV_BASE=http://localhost:8282/dav   # or pass --dav-base <url> per command
+
+npx tsx src/cli.ts list-issues --status todo --max 10
+npx tsx src/cli.ts fetch-issue --id "1753600000000-example-issue"
+npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done
+npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --content "New content"
+npx tsx src/cli.ts create-issue --project project-a --subject "New subject" --content "New content"
+```
+
+Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`).
+
 ## Testing
 
 ```bash
 cd web
 npm run test              # component-level unit tests
 npm run test:integration  # WebDAV integration tests (needs `docker compose up -d` running first)
+```
+
+```bash
+cd scripts
+npm run test       # kbl unit tests
+npm run typecheck  # type-check without emitting
 ```
 
 ## WebDAV endpoints

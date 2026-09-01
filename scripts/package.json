@@ -1,0 +1,25 @@
+{
+  "name": "kbl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "kbl": "./src/cli.ts"
+  },
+  "scripts": {
+    "kbl": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "webdav": "^5.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
