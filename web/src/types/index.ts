@@ -1,7 +1,8 @@
-// Kanban column definitions
-export type Column = "todo" | "working" | "done" | "pending";
-
-export const COLUMNS: Column[] = ["todo", "working", "done", "pending"];
+// Column/Issue live in lib/issue-format.ts (framework-agnostic, reused by
+// scripts/kbl) — re-exported here for existing app-side imports.
+export type { Column, Issue } from "../lib/issue-format";
+export { COLUMNS } from "../lib/issue-format";
+import type { Column } from "../lib/issue-format";
 
 export const COLUMN_LABELS: Record<Column, string> = {
   todo: "Todo",
@@ -17,20 +18,6 @@ export const COLUMN_COLORS: Record<Column, string> = {
   done: "badge-success",
   pending: "badge-warning",
 };
-
-// Issue type
-export interface Issue {
-  /** Filename without extension, e.g. "1735000000000-fix-login-bug" */
-  id: string;
-  /** Title extracted from the Markdown H1 */
-  subject: string;
-  /** Body after the H1 */
-  content: string;
-  /** Column this issue belongs to */
-  column: Column;
-  /** Optional project classification, from the issue's YAML frontmatter */
-  project?: string;
-}
 
 // Modal operation mode
 export type ModalMode = "create" | "edit";

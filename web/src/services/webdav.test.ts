@@ -115,9 +115,9 @@ describe("sortByOrder", () => {
   });
 
   it("appends issues missing from the order, preserving their original relative order", () => {
-    const issues = [issue("a"), issue("b"), issue("c")];
+    const issues = [issue("a"), issue("b"), issue("c"), issue("d")];
     const sorted = sortByOrder(issues, ["b.md"]);
-    expect(sorted.map((i) => i.id)).toEqual(["b", "a", "c"]);
+    expect(sorted.map((i) => i.id)).toEqual(["b", "a", "c", "d"]);
   });
 
   it("ignores order entries for issues that no longer exist", () => {
