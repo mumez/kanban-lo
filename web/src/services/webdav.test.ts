@@ -3,7 +3,7 @@ import { parseMarkdown, serializeMarkdown, generateId, sortByOrder } from "./web
 import type { Issue } from "../types";
 
 function issue(id: string): Issue {
-  return { id, subject: id, content: "", column: "todo" };
+  return { id, subject: id, content: "", status: "todo" };
 }
 
 describe("parseMarkdown", () => {

@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-kanban-lo is a file-based kanban board. Issues are Markdown files under `issues/{todo,working,done,pending}/`, and the SolidJS SPA reads/writes them directly over WebDAV — there is no backend API or database. Moving an issue between columns is a WebDAV `MOVE` (file rename between directories); there is no separate "status" field.
+kanban-lo is a file-based kanban board. Issues are Markdown files under `issues/{todo,working,done,pending}/`, and the SolidJS SPA reads/writes them directly over WebDAV — there is no backend API or database. An issue's status is which of those four directories its file lives in; changing status is a WebDAV `MOVE` (file rename between directories), not a field edit. In code, `Issue.status` (type `Column`) reflects this: the web app calls it a "column" in UI-facing naming (`Column`, `COLUMNS`, `KanbanColumn.tsx`, etc., matching the board metaphor), while the `kbl` CLI surfaces it as `--status`/`status` since there's no visual column there.
 
 Issue file format (see `_templates/issue.md`):
 ```markdown

@@ -5,7 +5,7 @@ import type { Issue } from "../../../web/src/lib/issue-format";
 
 vi.mock("../webdavClient");
 
-const baseIssue: Issue = { id: "abc", subject: "Subject", content: "old", column: "todo" };
+const baseIssue: Issue = { id: "abc", subject: "Subject", content: "old", status: "todo" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,7 +39,7 @@ it("updates content only", async () => {
 
 it("changes status only", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
-  vi.mocked(dav.changeIssueStatus).mockResolvedValue({ ...baseIssue, column: "done" });
+  vi.mocked(dav.changeIssueStatus).mockResolvedValue({ ...baseIssue, status: "done" });
 
   await changeIssue({ id: "abc", status: "done" });
 
@@ -51,7 +51,7 @@ it("updates content before changing status when both are given", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
   const withNewContent = { ...baseIssue, content: "new" };
   vi.mocked(dav.updateIssueContent).mockResolvedValue(withNewContent);
-  vi.mocked(dav.changeIssueStatus).mockResolvedValue({ ...withNewContent, column: "done" });
+  vi.mocked(dav.changeIssueStatus).mockResolvedValue({ ...withNewContent, status: "done" });
 
   await changeIssue({ id: "abc", content: "new", status: "done" });
 

@@ -35,8 +35,8 @@ describe("KanbanColumn", () => {
 
   it("lists only the issues belonging to this column, with the correct count", async () => {
     vi.mocked(dav.loadAllIssues).mockResolvedValue([
-      { id: "1", subject: "In todo", content: "", column: "todo" },
-      { id: "2", subject: "In working", content: "", column: "working" },
+      { id: "1", subject: "In todo", content: "", status: "todo" },
+      { id: "2", subject: "In working", content: "", status: "working" },
     ]);
     await kanbanStore.reload();
 

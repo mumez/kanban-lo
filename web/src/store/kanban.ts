@@ -71,7 +71,7 @@ function openCreateModal(column: Column) {
 }
 
 function openEditModal(issue: Issue) {
-  setModal({ open: true, mode: "edit", column: issue.column, issue });
+  setModal({ open: true, mode: "edit", column: issue.status, issue });
 }
 
 function closeModal() {
@@ -132,7 +132,7 @@ async function saveIssue(id: string, subject: string, content: string, project?:
 /** Move an issue to another column, appending it to the end */
 async function moveIssue(issueId: string, toColumn: Column) {
   const issue = issues.find((i) => i.id === issueId);
-  if (!issue || issue.column === toColumn) return;
+  if (!issue || issue.status === toColumn) return;
   await reorderIssue(issueId, toColumn, issuesByColumn(toColumn).length);
 }
 
@@ -144,7 +144,7 @@ async function moveIssue(issueId: string, toColumn: Column) {
 async function reorderIssue(issueId: string, toColumn: Column, toIndex: number) {
   const issue = issues.find((i) => i.id === issueId);
   if (!issue) return;
-  const fromColumn = issue.column;
+  const fromColumn = issue.status;
 
   const targetIds = issuesByColumn(toColumn)
     .map((i) => i.id)
@@ -178,7 +178,7 @@ async function reorderIssue(issueId: string, toColumn: Column, toIndex: number) 
     setIssues(
       orderedIds.map((id) => {
         const original = byId.get(id)!;
-        return id === issueId ? { ...original, column: toColumn } : original;
+        return id === issueId ? { ...original, status: toColumn } : original;
       })
     );
 
@@ -205,7 +205,7 @@ async function removeIssue(issue: Issue) {
  * rendering instead.
  */
 function issuesByColumn(column: Column): Issue[] {
-  return issues.filter((i) => i.column === column);
+  return issues.filter((i) => i.status === column);
 }
 
 /** Issues to render for a column: issuesByColumn narrowed by the selected project filter. Unclassified issues (no project) are always shown. */

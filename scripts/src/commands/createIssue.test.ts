@@ -15,7 +15,7 @@ it("creates an issue in the given column with subject/content/project", async ()
     id: "123-new-issue",
     subject: "New issue",
     content: "body",
-    column: "todo",
+    status: "todo",
     project: "project-a",
   };
   vi.mocked(dav.createIssue).mockResolvedValue(created);
@@ -30,7 +30,7 @@ it("passes an undefined project through when none is given", async () => {
     id: "123-new-issue",
     subject: "New issue",
     content: "",
-    column: "todo",
+    status: "todo",
   });
 
   await createIssue({ subject: "New issue", content: "", status: "todo" });

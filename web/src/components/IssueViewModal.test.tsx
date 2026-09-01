@@ -8,7 +8,7 @@ const issue: Issue = {
   id: "1-fix-bug",
   subject: "Fix bug",
   content: "# Heading\n\nSome **bold** text.",
-  column: "todo",
+  status: "todo",
   project: "project-a",
 };
 

@@ -5,8 +5,8 @@ import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
 
-function issue(id: string, column: Issue["column"]): Issue {
-  return { id, subject: id, content: "", column };
+function issue(id: string, status: Issue["status"]): Issue {
+  return { id, subject: id, content: "", status };
 }
 
 async function seed(issues: Issue[], projects: string[] = []) {
@@ -147,7 +147,7 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
       id: "1",
       subject: "New",
       content: "",
-      column: "todo",
+      status: "todo",
       project: "project-a",
     });
 

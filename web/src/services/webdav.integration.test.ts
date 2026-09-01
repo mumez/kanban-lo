@@ -12,7 +12,7 @@ describe("webdav service (integration)", () => {
 
   afterEach(async () => {
     for (const { column, id } of cleanup.splice(0)) {
-      await dav.deleteIssue({ id, subject: "", content: "", column }).catch(() => {});
+      await dav.deleteIssue({ id, subject: "", content: "", status: column }).catch(() => {});
     }
   });
 

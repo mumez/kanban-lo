@@ -12,7 +12,7 @@ const issue: Issue = {
   id: "1-fix-bug",
   subject: "Fix bug",
   content: "Details here",
-  column: "todo",
+  status: "todo",
 };
 
 // createSortable() requires a surrounding DragDropProvider + SortableProvider context.
