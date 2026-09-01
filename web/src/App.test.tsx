@@ -21,6 +21,7 @@ describe("App", () => {
 
   afterEach(() => {
     setVisibilityState("visible");
+    localStorage.removeItem("kanban-lo:selectedProject");
   });
 
   it("reloads issues when the tab becomes visible again", async () => {
@@ -43,5 +44,22 @@ describe("App", () => {
     await Promise.resolve();
 
     expect(dav.loadAllIssues).toHaveBeenCalledTimes(1);
+  });
+
+  it("restores the project filter dropdown to the persisted project once the project list loads", async () => {
+    // The project list only arrives after the async reload(), i.e. after the
+    // persisted selection is already applied — the <select>'s DOM value must
+    // be re-applied once its matching <option> exists.
+    localStorage.setItem("kanban-lo:selectedProject", "project-b");
+    vi.resetModules();
+    const { default: FreshApp } = await import("./App");
+    const freshDav = await import("./services/webdav");
+    vi.mocked(freshDav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(freshDav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+
+    const { findByLabelText } = render(() => <FreshApp />);
+    const select = (await findByLabelText("Filter by project")) as HTMLSelectElement;
+
+    await vi.waitFor(() => expect(select.value).toBe("project-b"));
   });
 });

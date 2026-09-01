@@ -1,10 +1,21 @@
-import { type Component, onMount, onCleanup, Show } from "solid-js";
+import { type Component, createEffect, onMount, onCleanup, Show } from "solid-js";
 import { kanbanStore } from "./store/kanban";
 import Board from "./components/Board";
 import IssueModal from "./components/IssueModal";
 import IssueViewModal from "./components/IssueViewModal";
 
 const App: Component = () => {
+  // A <select>'s DOM value only "sticks" if its matching <option> already
+  // exists; on load, the persisted project loads before kanbanStore.projects
+  // (populated by the async reload()), so the browser silently resets the
+  // select to its first option. Re-apply the value once the options catch up.
+  let projectSelectRef: HTMLSelectElement | undefined;
+  createEffect(() => {
+    kanbanStore.projects;
+    const selected = kanbanStore.selectedProject ?? "";
+    if (projectSelectRef) projectSelectRef.value = selected;
+  });
+
   onMount(() => {
     kanbanStore.init();
 
@@ -56,6 +67,7 @@ const App: Component = () => {
 
           {/* Project filter */}
           <select
+            ref={projectSelectRef}
             class="select select-bordered select-sm"
             aria-label="Filter by project"
             value={kanbanStore.selectedProject ?? ""}
