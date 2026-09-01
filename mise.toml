@@ -1,0 +1,26 @@
+[tools]
+node = "lts"
+
+[tasks.test-web]
+description = "Run web unit tests"
+dir = "web"
+run = "npm test"
+
+[tasks.test-cli]
+description = "Run kbl CLI unit tests"
+dir = "scripts"
+run = "npm test"
+
+[tasks.test]
+description = "Run all unit tests (web + cli)"
+depends = ["test-web", "test-cli"]
+
+[tasks.build-web]
+description = "Build the web SPA (tsc + vite build)"
+dir = "web"
+run = "npm run build"
+
+[tasks.serve]
+description = "Build the web SPA and start the Caddy server (WebDAV + static)"
+depends = ["build-web"]
+run = "docker compose up --build"
