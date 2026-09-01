@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 
 it("prints the issue as JSON", async () => {
-  const issue: Issue = { id: "abc", subject: "Subject", content: "Body", column: "todo" };
+  const issue: Issue = { id: "abc", subject: "Subject", content: "Body", status: "todo" };
   vi.mocked(dav.getIssue).mockResolvedValue(issue);
 
   await fetchIssue("abc");

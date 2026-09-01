@@ -31,7 +31,7 @@ describe("IssueModal", () => {
       id: "1-test-issue",
       subject: "Test issue",
       content: "Some details",
-      column: "todo",
+      status: "todo",
     });
 
     kanbanStore.openCreateModal("todo");
@@ -57,7 +57,7 @@ describe("IssueModal", () => {
   });
 
   it("prefills the fields with the issue being edited", async () => {
-    const issue: Issue = { id: "1", subject: "Existing", content: "Body", column: "working" };
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
     await seedAndEdit(issue);
     render(() => <IssueModal />);
 
@@ -67,7 +67,7 @@ describe("IssueModal", () => {
   });
 
   it("saves edits without moving when the column is unchanged", async () => {
-    const issue: Issue = { id: "1", subject: "Existing", content: "Body", column: "working" };
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
 
     await seedAndEdit(issue);
@@ -87,8 +87,8 @@ describe("IssueModal", () => {
   });
 
   it("moves the issue before saving when the column is changed", async () => {
-    const issue: Issue = { id: "1", subject: "Existing", content: "Body", column: "working" };
-    vi.mocked(dav.moveIssue).mockResolvedValue({ ...issue, column: "done" });
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    vi.mocked(dav.moveIssue).mockResolvedValue({ ...issue, status: "done" });
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
 
     await seedAndEdit(issue);
@@ -110,7 +110,7 @@ describe("IssueModal", () => {
       id: "1",
       subject: "Test issue",
       content: "",
-      column: "todo",
+      status: "todo",
       project: "project-b",
     });
 
@@ -134,7 +134,7 @@ describe("IssueModal", () => {
       id: "1",
       subject: "Existing",
       content: "",
-      column: "working",
+      status: "working",
       project: "project-a",
     };
     await seedAndEdit(issue);

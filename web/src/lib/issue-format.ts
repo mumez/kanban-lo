@@ -10,8 +10,8 @@ export interface Issue {
   subject: string;
   /** Body after the H1 */
   content: string;
-  /** Column this issue belongs to */
-  column: Column;
+  /** Status (column) this issue is in */
+  status: Column;
   /** Optional project classification, from the issue's YAML frontmatter */
   project?: string;
 }

@@ -15,7 +15,7 @@ const IssueModal: Component = () => {
       if (kanbanStore.modal.mode === "edit" && kanbanStore.modal.issue) {
         setSubject(kanbanStore.modal.issue.subject);
         setContent(kanbanStore.modal.issue.content);
-        setTargetColumn(kanbanStore.modal.issue.column);
+        setTargetColumn(kanbanStore.modal.issue.status);
         setProject(kanbanStore.modal.issue.project ?? "");
       } else {
         setSubject("");
@@ -37,7 +37,7 @@ const IssueModal: Component = () => {
     } else if (kanbanStore.modal.issue) {
       const issue = kanbanStore.modal.issue;
       // Move first if the column changed, then update content
-      if (issue.column !== targetColumn()) {
+      if (issue.status !== targetColumn()) {
         await kanbanStore.moveIssue(issue.id, targetColumn());
       }
       await kanbanStore.saveIssue(issue.id, s, content().trim(), p);

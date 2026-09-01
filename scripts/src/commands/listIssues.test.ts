@@ -6,7 +6,7 @@ import type { Issue } from "../../../web/src/lib/issue-format";
 vi.mock("../webdavClient");
 
 function issue(id: string): Issue {
-  return { id, subject: `Subject ${id}`, content: "", column: "todo" };
+  return { id, subject: `Subject ${id}`, content: "", status: "todo" };
 }
 
 let logSpy: any;

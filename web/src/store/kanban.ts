@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
 import { COLUMNS } from "../types";
@@ -14,7 +14,12 @@ const [issues, setIssues] = createStore<Issue[]>([]);
 async function reload() {
   const [all, projectList] = await Promise.all([dav.loadAllIssues(), dav.loadProjects()]);
   setIssues(all);
-  setProjects(Array.isArray(projectList) ? projectList : []);
+  const list = Array.isArray(projectList) ? projectList : [];
+  setProjects(list);
+  const selected = selectedProject();
+  if (selected !== null && !list.includes(selected)) {
+    setSelectedProject(null);
+  }
 }
 
 // ----------------------------------------------------------------
@@ -24,8 +29,48 @@ async function reload() {
 /** Admin-maintained project list, from issues/_projects.json (read-only in the UI) */
 const [projects, setProjects] = createSignal<string[]>([]);
 
-/** Currently selected project filter; null means "all" */
-const [selectedProject, setSelectedProject] = createSignal<string | null>(null);
+const SELECTED_PROJECT_STORAGE_KEY = "kanban-lo:selectedProject";
+
+function loadStoredSelectedProject(): string | null {
+  try {
+    return localStorage.getItem(SELECTED_PROJECT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Currently selected project filter; null means "all". Persisted to localStorage so it survives a reload. */
+const [selectedProject, setSelectedProjectSignal] = createSignal<string | null>(
+  loadStoredSelectedProject()
+);
+
+function setSelectedProject(project: string | null) {
+  setSelectedProjectSignal(project);
+  try {
+    if (project === null) {
+      localStorage.removeItem(SELECTED_PROJECT_STORAGE_KEY);
+    } else {
+      localStorage.setItem(SELECTED_PROJECT_STORAGE_KEY, project);
+    }
+  } catch {
+    // localStorage unavailable (e.g. disabled/private browsing) — selection just won't persist
+  }
+}
+
+// ----------------------------------------------------------------
+// Text search filter
+// ----------------------------------------------------------------
+
+/** Substring filter over subject/content, applied client-side only; empty string means "no filter" */
+const [searchQuery, setSearchQuery] = createSignal("");
+
+function matchesSearchQuery(issue: Issue, lowercasedQuery: string): boolean {
+  if (!lowercasedQuery) return true;
+  return (
+    issue.subject.toLowerCase().includes(lowercasedQuery) ||
+    issue.content.toLowerCase().includes(lowercasedQuery)
+  );
+}
 
 // ----------------------------------------------------------------
 // Loading / error state
@@ -71,7 +116,7 @@ function openCreateModal(column: Column) {
 }
 
 function openEditModal(issue: Issue) {
-  setModal({ open: true, mode: "edit", column: issue.column, issue });
+  setModal({ open: true, mode: "edit", column: issue.status, issue });
 }
 
 function closeModal() {
@@ -132,7 +177,7 @@ async function saveIssue(id: string, subject: string, content: string, project?:
 /** Move an issue to another column, appending it to the end */
 async function moveIssue(issueId: string, toColumn: Column) {
   const issue = issues.find((i) => i.id === issueId);
-  if (!issue || issue.column === toColumn) return;
+  if (!issue || issue.status === toColumn) return;
   await reorderIssue(issueId, toColumn, issuesByColumn(toColumn).length);
 }
 
@@ -144,7 +189,7 @@ async function moveIssue(issueId: string, toColumn: Column) {
 async function reorderIssue(issueId: string, toColumn: Column, toIndex: number) {
   const issue = issues.find((i) => i.id === issueId);
   if (!issue) return;
-  const fromColumn = issue.column;
+  const fromColumn = issue.status;
 
   const targetIds = issuesByColumn(toColumn)
     .map((i) => i.id)
@@ -178,7 +223,7 @@ async function reorderIssue(issueId: string, toColumn: Column, toIndex: number) 
     setIssues(
       orderedIds.map((id) => {
         const original = byId.get(id)!;
-        return id === issueId ? { ...original, column: toColumn } : original;
+        return id === issueId ? { ...original, status: toColumn } : original;
       })
     );
 
@@ -205,13 +250,31 @@ async function removeIssue(issue: Issue) {
  * rendering instead.
  */
 function issuesByColumn(column: Column): Issue[] {
-  return issues.filter((i) => i.column === column);
+  return issues.filter((i) => i.status === column);
 }
 
-/** Issues to render for a column: issuesByColumn narrowed by the selected project filter. Unclassified issues (no project) are always shown. */
+/**
+ * Issues to render for a column: issuesByColumn narrowed by the selected
+ * project filter and search query. Unclassified issues (no project) are
+ * always shown regardless of the project filter. One memo per column so the
+ * filter runs once per change, even though each column reads it from several
+ * reactive sites.
+ */
+const visibleByColumn = Object.fromEntries(
+  COLUMNS.map((column) => [
+    column,
+    createMemo(() => {
+      const project = selectedProject();
+      const query = searchQuery().toLowerCase();
+      return issuesByColumn(column).filter(
+        (i) => (project === null || !i.project || i.project === project) && matchesSearchQuery(i, query)
+      );
+    }),
+  ])
+) as Record<Column, Accessor<Issue[]>>;
+
 function visibleIssuesByColumn(column: Column): Issue[] {
-  const project = selectedProject();
-  return issuesByColumn(column).filter((i) => project === null || !i.project || i.project === project);
+  return visibleByColumn[column]();
 }
 
 // ----------------------------------------------------------------
@@ -241,6 +304,9 @@ export const kanbanStore = {
   get selectedProject() {
     return selectedProject();
   },
+  get searchQuery() {
+    return searchQuery();
+  },
 
   // derived
   issuesByColumn,
@@ -262,4 +328,5 @@ export const kanbanStore = {
   removeIssue,
   reload,
   setSelectedProject,
+  setSearchQuery,
 };

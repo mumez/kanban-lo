@@ -5,8 +5,8 @@ import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
 
-function issue(id: string, column: Issue["column"]): Issue {
-  return { id, subject: id, content: "", column };
+function issue(id: string, status: Issue["status"]): Issue {
+  return { id, subject: id, content: "", status };
 }
 
 async function seed(issues: Issue[], projects: string[] = []) {
@@ -132,6 +132,98 @@ describe("kanbanStore project filter", () => {
 
     expect(kanbanStore.issuesByColumn("todo").map((i) => i.id)).toEqual(["a", "b"]);
   });
+
+  it("persists the selected project to localStorage, and clears it when set back to null", () => {
+    kanbanStore.setSelectedProject("project-a");
+    expect(localStorage.getItem("kanban-lo:selectedProject")).toBe("project-a");
+
+    kanbanStore.setSelectedProject(null);
+    expect(localStorage.getItem("kanban-lo:selectedProject")).toBeNull();
+  });
+
+  it("restores the previously selected project from localStorage on load", async () => {
+    localStorage.setItem("kanban-lo:selectedProject", "project-b");
+    vi.resetModules();
+    const { kanbanStore: freshStore } = await import("./kanban");
+
+    expect(freshStore.selectedProject).toBe("project-b");
+  });
+
+  it("keeps a restored project selection that is still in the project list on reload", async () => {
+    localStorage.setItem("kanban-lo:selectedProject", "project-b");
+    vi.resetModules();
+    const { kanbanStore: freshStore } = await import("./kanban");
+    const freshDav = await import("../services/webdav");
+    vi.mocked(freshDav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(freshDav.loadProjects).mockResolvedValue(["project-a", "project-b"]);
+
+    await freshStore.reload();
+
+    expect(freshStore.selectedProject).toBe("project-b");
+  });
+
+  it("clears a restored project selection that is no longer in the project list on reload", async () => {
+    localStorage.setItem("kanban-lo:selectedProject", "project-x");
+    vi.resetModules();
+    const { kanbanStore: freshStore } = await import("./kanban");
+    const freshDav = await import("../services/webdav");
+    vi.mocked(freshDav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(freshDav.loadProjects).mockResolvedValue(["project-a"]);
+
+    await freshStore.reload();
+
+    expect(freshStore.selectedProject).toBeNull();
+    expect(localStorage.getItem("kanban-lo:selectedProject")).toBeNull();
+  });
+});
+
+describe("kanbanStore search filter", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    kanbanStore.closeModal();
+    kanbanStore.setSelectedProject(null);
+    kanbanStore.setSearchQuery("");
+  });
+
+  it("visibleIssuesByColumn shows every issue when the search query is empty", async () => {
+    const a = { ...issue("a", "todo"), subject: "Fix login bug" };
+    const b = { ...issue("b", "todo"), subject: "Add dark mode" };
+    await seed([a, b]);
+
+    expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a", "b"]);
+  });
+
+  it("narrows to issues whose subject or content matches the query, case-insensitively, without reordering", async () => {
+    const a = { ...issue("a", "todo"), subject: "Fix login bug" };
+    const b = { ...issue("b", "todo"), subject: "Add dark mode", content: "Should respect LOGIN state" };
+    const c = { ...issue("c", "todo"), subject: "Unrelated" };
+    await seed([a, b, c]);
+
+    kanbanStore.setSearchQuery("login");
+
+    expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a", "b"]);
+  });
+
+  it("combines with the project filter", async () => {
+    const a = { ...issue("a", "todo"), subject: "Fix login bug", project: "project-a" };
+    const b = { ...issue("b", "todo"), subject: "Fix login typo", project: "project-b" };
+    await seed([a, b], ["project-a", "project-b"]);
+
+    kanbanStore.setSelectedProject("project-a");
+    kanbanStore.setSearchQuery("login");
+
+    expect(kanbanStore.visibleIssuesByColumn("todo").map((i) => i.id)).toEqual(["a"]);
+  });
+
+  it("issuesByColumn (used for _order.json bookkeeping) ignores the search query", async () => {
+    const a = { ...issue("a", "todo"), subject: "Fix login bug" };
+    const b = { ...issue("b", "todo"), subject: "Unrelated" };
+    await seed([a, b]);
+
+    kanbanStore.setSearchQuery("login");
+
+    expect(kanbanStore.issuesByColumn("todo").map((i) => i.id)).toEqual(["a", "b"]);
+  });
 });
 
 describe("kanbanStore.addIssue / saveIssue project field", () => {
@@ -147,7 +239,7 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
       id: "1",
       subject: "New",
       content: "",
-      column: "todo",
+      status: "todo",
       project: "project-a",
     });
 

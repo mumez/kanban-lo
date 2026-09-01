@@ -8,7 +8,7 @@ export interface ChangeIssueOptions {
 }
 
 /**
- * Change an existing issue's content and/or column. A status change moves
+ * Change an existing issue's content and/or status. A status change moves
  * the issue to the top of the destination column's order (see
  * webdavClient.changeIssueStatus).
  */

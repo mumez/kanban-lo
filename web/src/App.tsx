@@ -32,6 +32,28 @@ const App: Component = () => {
         </div>
 
         <div class="navbar-end gap-2">
+          {/* Text filter (subject/content substring match) */}
+          <div class="relative">
+            <input
+              type="text"
+              class="input input-bordered input-sm w-48 pr-7"
+              placeholder="Filter issues..."
+              aria-label="Filter issues by text"
+              value={kanbanStore.searchQuery}
+              onInput={(e) => kanbanStore.setSearchQuery(e.currentTarget.value)}
+            />
+            <Show when={kanbanStore.searchQuery}>
+              <button
+                type="button"
+                class="absolute right-1 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+                aria-label="Clear filter"
+                onClick={() => kanbanStore.setSearchQuery("")}
+              >
+                ✕
+              </button>
+            </Show>
+          </div>
+
           {/* Project filter */}
           <select
             class="select select-bordered select-sm"

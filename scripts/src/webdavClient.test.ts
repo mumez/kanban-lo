@@ -69,7 +69,7 @@ describe("getIssue", () => {
 
     const issue = await dav.getIssue("abc");
 
-    expect(issue).toEqual({ id: "abc", subject: "Subject", content: "Body", column: "working" });
+    expect(issue).toEqual({ id: "abc", subject: "Subject", content: "Body", status: "working" });
   });
 
   it("returns null when the id isn't in any column", async () => {
@@ -90,7 +90,7 @@ describe("createIssue", () => {
 
     expect(issue.subject).toBe("New issue");
     expect(issue.content).toBe("body");
-    expect(issue.column).toBe("todo");
+    expect(issue.status).toBe("todo");
     expect(issue.project).toBe("project-a");
     expect(client.putFileContents).toHaveBeenCalledTimes(1);
     expect(client.putFileContents).toHaveBeenCalledWith(
@@ -120,7 +120,7 @@ describe("updateIssueContent", () => {
     const dav = await loadWebdavClient();
     client.putFileContents.mockResolvedValue(undefined);
 
-    const issue = { id: "abc", subject: "Subject", content: "old", column: "todo" as const, project: "project-a" };
+    const issue = { id: "abc", subject: "Subject", content: "old", status: "todo" as const, project: "project-a" };
     const updated = await dav.updateIssueContent(issue, "new content");
 
     expect(updated.content).toBe("new content");
@@ -138,7 +138,7 @@ describe("changeIssueStatus", () => {
     client.getFileContents.mockResolvedValue(JSON.stringify(["a.md", "abc.md", "b.md"]));
     client.putFileContents.mockResolvedValue(undefined);
 
-    const issue = { id: "abc", subject: "S", content: "", column: "todo" as const };
+    const issue = { id: "abc", subject: "S", content: "", status: "todo" as const };
     const result = await dav.changeIssueStatus(issue, "todo");
 
     expect(result).toEqual(issue);
@@ -160,10 +160,10 @@ describe("changeIssueStatus", () => {
       return Promise.reject(new Error("404"));
     });
 
-    const issue = { id: "abc", subject: "S", content: "", column: "todo" as const };
+    const issue = { id: "abc", subject: "S", content: "", status: "todo" as const };
     const result = await dav.changeIssueStatus(issue, "done");
 
-    expect(result.column).toBe("done");
+    expect(result.status).toBe("done");
     expect(client.moveFile).toHaveBeenCalledWith("/todo/abc.md", "/done/abc.md");
     expect(client.putFileContents).toHaveBeenCalledWith(
       "/todo/_order.json",

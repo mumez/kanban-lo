@@ -116,7 +116,7 @@ export async function listIssues(column: Column): Promise<Issue[]> {
           format: "text",
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, column, project };
+        return { id, subject, content, status: column, project };
       } catch {
         return null;
       }
@@ -142,13 +142,15 @@ export async function createIssue(
   await client.putFileContents(path, text, { overwrite: false });
   await addToOrder(column, id);
 
-  return project ? { id, subject, content, column, project } : { id, subject, content, column };
+  return project
+    ? { id, subject, content, status: column, project }
+    : { id, subject, content, status: column };
 }
 
 /** Update an issue's content (overwrite file in the same column) */
 export async function updateIssue(issue: Issue): Promise<void> {
   const client = getClient();
-  const path = davPath(issue.column, issue.id);
+  const path = davPath(issue.status, issue.id);
   const text = serializeMarkdown(issue.subject, issue.content, issue.project);
   await client.putFileContents(path, text, { overwrite: true });
 }
@@ -156,20 +158,20 @@ export async function updateIssue(issue: Issue): Promise<void> {
 /** Move an issue to another column (WebDAV MOVE) */
 export async function moveIssue(issue: Issue, toColumn: Column): Promise<Issue> {
   const client = getClient();
-  const fromPath = davPath(issue.column, issue.id);
+  const fromPath = davPath(issue.status, issue.id);
   const toPath = davPath(toColumn, issue.id);
 
   await client.moveFile(fromPath, toPath);
 
-  return { ...issue, column: toColumn };
+  return { ...issue, status: toColumn };
 }
 
 /** Delete an issue */
 export async function deleteIssue(issue: Issue): Promise<void> {
   const client = getClient();
-  const path = davPath(issue.column, issue.id);
+  const path = davPath(issue.status, issue.id);
   await client.deleteFile(path);
-  await removeFromOrder(issue.column, issue.id);
+  await removeFromOrder(issue.status, issue.id);
 }
 
 /** Load issues from all columns */

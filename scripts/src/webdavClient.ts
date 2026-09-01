@@ -112,7 +112,7 @@ export async function listIssues(column: Column): Promise<Issue[]> {
           format: "text",
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, column, project };
+        return { id, subject, content, status: column, project };
       } catch {
         return null;
       }
@@ -133,7 +133,7 @@ export async function getIssue(id: string): Promise<Issue | null> {
           format: "text",
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, column, project } as Issue;
+        return { id, subject, content, status: column, project } as Issue;
       } catch {
         return null;
       }
@@ -157,14 +157,16 @@ export async function createIssue(
   await client.putFileContents(path, text, { overwrite: false });
   await addToOrder(column, id);
 
-  return project ? { id, subject, content, column, project } : { id, subject, content, column };
+  return project
+    ? { id, subject, content, status: column, project }
+    : { id, subject, content, status: column };
 }
 
 /** Update an issue's content (overwrite file in the same column) */
 export async function updateIssueContent(issue: Issue, content: string): Promise<Issue> {
   const client = getClient();
   const updated: Issue = { ...issue, content };
-  const path = davPath(issue.column, issue.id);
+  const path = davPath(issue.status, issue.id);
   const text = serializeMarkdown(updated.subject, updated.content, updated.project);
   await client.putFileContents(path, text, { overwrite: true });
   return updated;
@@ -177,18 +179,18 @@ export async function updateIssueContent(issue: Issue, content: string): Promise
  * to "insert at top" (this CLI's semantics for a status change).
  */
 export async function changeIssueStatus(issue: Issue, toColumn: Column): Promise<Issue> {
-  if (issue.column === toColumn) {
+  if (issue.status === toColumn) {
     await insertAtTopOfOrder(toColumn, issue.id);
     return issue;
   }
 
   const client = getClient();
-  const fromPath = davPath(issue.column, issue.id);
+  const fromPath = davPath(issue.status, issue.id);
   const toPath = davPath(toColumn, issue.id);
   await client.moveFile(fromPath, toPath);
 
-  await removeFromOrder(issue.column, issue.id);
+  await removeFromOrder(issue.status, issue.id);
   await insertAtTopOfOrder(toColumn, issue.id);
 
-  return { ...issue, column: toColumn };
+  return { ...issue, status: toColumn };
 }
