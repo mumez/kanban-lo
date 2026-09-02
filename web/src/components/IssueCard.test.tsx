@@ -41,6 +41,16 @@ describe("IssueCard", () => {
     expect(screen.getByText("Details here")).toBeInTheDocument();
   });
 
+  it("copies the issue id to the clipboard when Copy ID is clicked", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Copy ID"));
+
+    expect(writeText).toHaveBeenCalledWith(issue.id);
+  });
+
   it("opens the view modal for this issue when View is clicked", () => {
     renderCard(issue);
     fireEvent.click(screen.getByTitle("View"));
