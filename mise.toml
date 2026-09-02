@@ -1,6 +1,20 @@
 [tools]
 node = "lts"
 
+[tasks.prepare-web]
+description = "Install dependencies for web ui"
+dir = "web"
+run = "npm install"
+
+[tasks.prepare-cli]
+description = "Install dependencies for CLI"
+dir = "scripts"
+run = "npm install"
+
+[tasks.prepare]
+description = "Install dependencies (web + cli)"
+depends = ["prepare-web", "prepare-cli"]
+
 [tasks.test-web]
 description = "Run web unit tests"
 dir = "web"

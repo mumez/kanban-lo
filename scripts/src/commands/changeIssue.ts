@@ -5,6 +5,7 @@ export interface ChangeIssueOptions {
   id: string;
   status?: Column;
   content?: string;
+  appendContent?: string;
 }
 
 /**
@@ -12,9 +13,17 @@ export interface ChangeIssueOptions {
  * the issue to the top of the destination column's order (see
  * webdavClient.changeIssueStatus).
  */
-export async function changeIssue({ id, status, content }: ChangeIssueOptions): Promise<void> {
-  if (status === undefined && content === undefined) {
-    throw new Error("change-issue requires at least one of --status or --content");
+export async function changeIssue({
+  id,
+  status,
+  content,
+  appendContent,
+}: ChangeIssueOptions): Promise<void> {
+  if (status === undefined && content === undefined && appendContent === undefined) {
+    throw new Error("change-issue requires at least one of --status, --content, or --append-content");
+  }
+  if (content !== undefined && appendContent !== undefined) {
+    throw new Error("change-issue accepts only one of --content or --append-content");
   }
 
   let issue = await dav.getIssue(id);
@@ -24,6 +33,9 @@ export async function changeIssue({ id, status, content }: ChangeIssueOptions): 
 
   if (content !== undefined) {
     issue = await dav.updateIssueContent(issue, content);
+  }
+  if (appendContent !== undefined) {
+    issue = await dav.updateIssueContent(issue, `${issue.content}\n\n${appendContent}`);
   }
   if (status !== undefined) {
     issue = await dav.changeIssueStatus(issue, status);

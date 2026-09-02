@@ -14,7 +14,7 @@ beforeEach(() => {
 
 it("throws when neither --status nor --content is given", async () => {
   await expect(changeIssue({ id: "abc" })).rejects.toThrow(
-    "change-issue requires at least one of --status or --content"
+    "change-issue requires at least one of --status, --content, or --append-content"
   );
   expect(dav.getIssue).not.toHaveBeenCalled();
 });
@@ -45,6 +45,23 @@ it("changes status only", async () => {
 
   expect(dav.updateIssueContent).not.toHaveBeenCalled();
   expect(dav.changeIssueStatus).toHaveBeenCalledWith(baseIssue, "done");
+});
+
+it("throws when both --content and --append-content are given", async () => {
+  await expect(changeIssue({ id: "abc", content: "new", appendContent: "more" })).rejects.toThrow(
+    "change-issue accepts only one of --content or --append-content"
+  );
+  expect(dav.getIssue).not.toHaveBeenCalled();
+});
+
+it("appends content to the existing content", async () => {
+  vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
+  vi.mocked(dav.updateIssueContent).mockResolvedValue({ ...baseIssue, content: "old\n\nmore" });
+
+  await changeIssue({ id: "abc", appendContent: "more" });
+
+  expect(dav.updateIssueContent).toHaveBeenCalledWith(baseIssue, "old\n\nmore");
+  expect(dav.changeIssueStatus).not.toHaveBeenCalled();
 });
 
 it("updates content before changing status when both are given", async () => {
