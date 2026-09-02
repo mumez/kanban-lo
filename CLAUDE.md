@@ -87,4 +87,4 @@ npm run typecheck          # tsc --noEmit
 npm run test               # Vitest unit tests
 ```
 
-Subcommands: `list-issues --status <column> [--max N]`, `fetch-issue --id <id>`, `change-issue --id <id> [--status <column>] [--content <text>]`, `create-issue --subject <text> [--project <name>] [--content <text>] [--status <column>]`. Unit tests mock `webdavClient.ts` (command tests) or the `webdav` npm package's `createClient` (`webdavClient.test.ts` itself), mirroring how `web/`'s tests mock `services/webdav.ts`.
+Subcommands: `list-issues [--status <column>] [--max N]` (defaults: `todo`, `10`), `fetch-issue --id <id>`, `change-issue --id <id> [--status <column>] [--content <text>]`, `create-issue --subject <text> [--project <name>] [--content <text>] [--status <column>]`, `list-projects`. Unit tests mock `webdavClient.ts` (command tests) or the `webdav` npm package's `createClient` (`webdavClient.test.ts` itself), mirroring how `web/`'s tests mock `services/webdav.ts`.

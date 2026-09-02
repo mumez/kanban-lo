@@ -5,6 +5,7 @@ import { listIssues } from "./commands/listIssues";
 import { fetchIssue } from "./commands/fetchIssue";
 import { changeIssue } from "./commands/changeIssue";
 import { createIssue } from "./commands/createIssue";
+import { listProjects } from "./commands/listProjects";
 
 const program = new Command();
 
@@ -29,7 +30,7 @@ program
 program
   .command("list-issues")
   .description("List issues in a column, most-priority-first")
-  .addOption(new Option("--status <column>", "column to list").choices(COLUMNS).makeOptionMandatory())
+  .addOption(new Option("--status <column>", "column to list").choices(COLUMNS).default("todo"))
   .addOption(new Option("--max <n>", "maximum number of issues to list").default(10).argParser((v) => parseInt(v, 10)))
   .action((opts) => run(() => listIssues({ status: opts.status, max: opts.max })));
 
@@ -74,5 +75,10 @@ program
       })
     )
   );
+
+program
+  .command("list-projects")
+  .description("List the admin-maintained projects from issues/_projects.json")
+  .action(() => run(() => listProjects()));
 
 program.parseAsync();

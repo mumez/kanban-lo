@@ -38,6 +38,18 @@ const IssueCard: Component<Props> = (props) => {
         <div class="card-actions justify-end mt-1">
           <button
             class="btn btn-ghost btn-xs"
+            title="Copy ID"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(props.issue.id);
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M7 3a1 1 0 00-1 1v1H5a2 2 0 00-2 2v8a2 2 0 002 2h7a2 2 0 002-2v-1h1a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 00-1-1H7zm5 3V4H8v2h4zm2 1v8H5V7h9zM8 4h4v2H8V4z" />
+            </svg>
+          </button>
+          <button
+            class="btn btn-ghost btn-xs"
             title="View"
             onClick={(e) => {
               e.stopPropagation();

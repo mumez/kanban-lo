@@ -35,7 +35,10 @@ export async function changeIssue({
     issue = await dav.updateIssueContent(issue, content);
   }
   if (appendContent !== undefined) {
-    issue = await dav.updateIssueContent(issue, `${issue.content}\n\n${appendContent}`);
+    const nextContent = issue.content
+      ? `${issue.content}\n\n${appendContent}`
+      : appendContent;
+    issue = await dav.updateIssueContent(issue, nextContent);
   }
   if (status !== undefined) {
     issue = await dav.changeIssueStatus(issue, status);

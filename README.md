@@ -106,11 +106,12 @@ npm install
 # Point at your WebDAV server (defaults to http://localhost:8282/dav)
 export KBL_DAV_BASE=http://localhost:8282/dav   # or pass --dav-base <url> per command
 
-npx tsx src/cli.ts list-issues --status todo --max 10
+npx tsx src/cli.ts list-issues --status todo --max 10  # both optional; defaults shown
 npx tsx src/cli.ts fetch-issue --id "1753600000000-example-issue"
 npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done --append-content "Append content"
 npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --content "New content"
 npx tsx src/cli.ts create-issue --project project-a --subject "New subject" --content "New content"
+npx tsx src/cli.ts list-projects
 ```
 
 Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`).

@@ -64,6 +64,16 @@ it("appends content to the existing content", async () => {
   expect(dav.changeIssueStatus).not.toHaveBeenCalled();
 });
 
+it("uses append content as-is when the existing content is empty", async () => {
+  const emptyContentIssue = { ...baseIssue, content: "" };
+  vi.mocked(dav.getIssue).mockResolvedValue(emptyContentIssue);
+  vi.mocked(dav.updateIssueContent).mockResolvedValue({ ...emptyContentIssue, content: "more" });
+
+  await changeIssue({ id: "abc", appendContent: "more" });
+
+  expect(dav.updateIssueContent).toHaveBeenCalledWith(emptyContentIssue, "more");
+});
+
 it("updates content before changing status when both are given", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
   const withNewContent = { ...baseIssue, content: "new" };
