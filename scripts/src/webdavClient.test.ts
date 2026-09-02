@@ -59,6 +59,23 @@ describe("loadOrder / saveOrder", () => {
   });
 });
 
+describe("listProjects", () => {
+  it("returns an empty array when _projects.json doesn't exist", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockRejectedValue(new Error("404"));
+
+    expect(await dav.listProjects()).toEqual([]);
+  });
+
+  it("parses the projects file", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockResolvedValue(JSON.stringify(["project-a", "project-b"]));
+
+    expect(await dav.listProjects()).toEqual(["project-a", "project-b"]);
+    expect(client.getFileContents).toHaveBeenCalledWith("/_projects.json", { format: "text" });
+  });
+});
+
 describe("getIssue", () => {
   it("finds an issue by searching each column", async () => {
     const dav = await loadWebdavClient();

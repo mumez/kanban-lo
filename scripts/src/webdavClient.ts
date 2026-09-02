@@ -86,6 +86,23 @@ async function insertAtTopOfOrder(column: Column, id: string): Promise<void> {
   await saveOrder(column, [`${id}.md`, ...filtered]);
 }
 
+/**
+ * Load the admin-maintained project list from issues/_projects.json.
+ * Empty when the file is absent.
+ */
+export async function listProjects(): Promise<string[]> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents("/_projects.json", {
+      format: "text",
+    })) as string;
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // ----------------------------------------------------------------
 // WebDAV operations
 // ----------------------------------------------------------------

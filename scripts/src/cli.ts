@@ -5,6 +5,7 @@ import { listIssues } from "./commands/listIssues";
 import { fetchIssue } from "./commands/fetchIssue";
 import { changeIssue } from "./commands/changeIssue";
 import { createIssue } from "./commands/createIssue";
+import { listProjects } from "./commands/listProjects";
 
 const program = new Command();
 
@@ -74,5 +75,10 @@ program
       })
     )
   );
+
+program
+  .command("list-projects")
+  .description("List the admin-maintained projects from issues/_projects.json")
+  .action(() => run(() => listProjects()));
 
 program.parseAsync();
