@@ -29,7 +29,7 @@ program
 program
   .command("list-issues")
   .description("List issues in a column, most-priority-first")
-  .addOption(new Option("--status <column>", "column to list").choices(COLUMNS).makeOptionMandatory())
+  .addOption(new Option("--status <column>", "column to list").choices(COLUMNS).default("todo"))
   .addOption(new Option("--max <n>", "maximum number of issues to list").default(10).argParser((v) => parseInt(v, 10)))
   .action((opts) => run(() => listIssues({ status: opts.status, max: opts.max })));
 
