@@ -45,7 +45,17 @@ program
   .requiredOption("--id <id>", "issue id")
   .addOption(new Option("--status <column>", "move the issue to this column (inserted at the top)").choices(COLUMNS))
   .option("--content <text>", "replace the issue's content")
-  .action((opts) => run(() => changeIssue({ id: opts.id, status: opts.status, content: opts.content })));
+  .option("--append-content <text>", "append text to the issue's existing content")
+  .action((opts) =>
+    run(() =>
+      changeIssue({
+        id: opts.id,
+        status: opts.status,
+        content: opts.content,
+        appendContent: opts.appendContent,
+      })
+    )
+  );
 
 program
   .command("create-issue")

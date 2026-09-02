@@ -108,7 +108,7 @@ export KBL_DAV_BASE=http://localhost:8282/dav   # or pass --dav-base <url> per c
 
 npx tsx src/cli.ts list-issues --status todo --max 10
 npx tsx src/cli.ts fetch-issue --id "1753600000000-example-issue"
-npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done
+npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done --append-content "Append content"
 npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --content "New content"
 npx tsx src/cli.ts create-issue --project project-a --subject "New subject" --content "New content"
 ```
