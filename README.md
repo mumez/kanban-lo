@@ -122,6 +122,18 @@ Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--stat
 
 To use it, copy or symlink `skills/kanban-lo/` into another project's skills directory (or point your agent's skill search path at this repo), and set `KBL_HOME`/`KBL_DAV_BASE` in that project's environment.
 
+You can also install it by [GitHub CLI `gh skill install`](https://cli.github.com/) command:
+
+```
+gh skill install mumez/kanban-lo 
+```
+
+For Claude Code with a user-scoped install:
+
+```
+gh skill install mumez/kanban-lo --agent claude-code --scope user
+```
+
 ## mise tasks
 
 [mise](https://mise.jdx.dev) task definitions in `mise.toml` (repository root) wrap the commands above:
