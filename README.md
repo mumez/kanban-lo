@@ -116,6 +116,12 @@ npx tsx src/cli.ts list-projects
 
 Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`).
 
+## Coding agent skill
+
+`skills/kanban-lo/` is an [Agent Skill](https://docs.claude.com/en/docs/claude-code/skills) that lets a coding agent (e.g. Claude Code) operate the board directly, without a human driving the UI or CLI. It wraps the `kbl` CLI's subcommands (`list-issues`, `fetch-issue`, `change-issue`, `create-issue`, `list-projects`) via `mise run`, and documents the required environment (`KBL_HOME` pointing at this checkout, `KBL_DAV_BASE` pointing at a reachable WebDAV server) plus guardrails such as confirming before `--content` overwrites an issue and checking `list-projects` before guessing a `--project` name.
+
+To use it, copy or symlink `skills/kanban-lo/` into another project's skills directory (or point your agent's skill search path at this repo), and set `KBL_HOME`/`KBL_DAV_BASE` in that project's environment.
+
 ## mise tasks
 
 [mise](https://mise.jdx.dev) task definitions in `mise.toml` (repository root) wrap the commands above:
