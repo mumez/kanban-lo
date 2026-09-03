@@ -58,3 +58,8 @@ run = "npx tsx src/cli.ts change-issue"
 description = "kbl create-issue -- create a new issue (e.g. mise run create-issue -- --subject 'new subject')"
 dir = "scripts"
 run = "npx tsx src/cli.ts create-issue"
+
+[tasks.list-projects]
+description = "kbl list-projects -- list the admin-maintained projects"
+dir = "scripts"
+run = "npx tsx src/cli.ts list-projects"
