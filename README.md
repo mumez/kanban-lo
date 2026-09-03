@@ -116,6 +116,25 @@ npx tsx src/cli.ts list-projects
 
 Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`).
 
+## mise tasks
+
+[mise](https://mise.jdx.dev) task definitions in `mise.toml` (repository root) wrap the commands above:
+
+```bash
+mise run prepare       # install dependencies (web + cli)
+mise run test          # run all unit tests (web + cli)
+mise run build-web     # build the web SPA
+mise run serve         # build the web SPA and start the Caddy server
+
+mise run list-issues -- --status todo --max 10
+mise run fetch-issue -- --id <id>
+mise run change-issue -- --id <id> --status done
+mise run create-issue -- --subject "new subject"
+mise run list-projects
+```
+
+Run `mise tasks` to see the full list.
+
 ## Testing
 
 ```bash
