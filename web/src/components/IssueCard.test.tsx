@@ -84,4 +84,23 @@ describe("IssueCard", () => {
 
     expect(dav.deleteIssue).not.toHaveBeenCalled();
   });
+
+  it("archives the issue when Archive is confirmed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(dav.archiveIssue).mockResolvedValue(undefined);
+
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Archive"));
+
+    await waitFor(() => expect(dav.archiveIssue).toHaveBeenCalledWith(issue));
+  });
+
+  it("does not archive the issue when the confirm dialog is dismissed", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    renderCard(issue);
+    fireEvent.click(screen.getByTitle("Archive"));
+
+    expect(dav.archiveIssue).not.toHaveBeenCalled();
+  });
 });

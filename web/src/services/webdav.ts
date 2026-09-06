@@ -174,6 +174,18 @@ export async function deleteIssue(issue: Issue): Promise<void> {
   await removeFromOrder(issue.status, issue.id);
 }
 
+/**
+ * Archive an issue: move its file into `_archive/`, outside any column (and
+ * thus outside the board entirely — there's no `archive` Column/UI state).
+ */
+export async function archiveIssue(issue: Issue): Promise<void> {
+  const client = getClient();
+  const fromPath = davPath(issue.status, issue.id);
+  const toPath = `/_archive/${issue.id}.md`;
+  await client.moveFile(fromPath, toPath);
+  await removeFromOrder(issue.status, issue.id);
+}
+
 /** Load issues from all columns */
 export async function loadAllIssues(): Promise<Issue[]> {
   const columns: Column[] = ["todo", "working", "done", "pending"];

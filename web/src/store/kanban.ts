@@ -242,6 +242,14 @@ async function removeIssue(issue: Issue) {
   });
 }
 
+/** Archive an issue (moves it out of the board entirely, into _archive/) */
+async function archiveIssue(issue: Issue) {
+  await run(async () => {
+    await dav.archiveIssue(issue);
+    setIssues((prev) => prev.filter((i) => i.id !== issue.id));
+  });
+}
+
 /**
  * Issues filtered by column (derived getter). Deliberately ignores the
  * project filter — reorderIssue relies on this for the full per-column id
@@ -326,6 +334,7 @@ export const kanbanStore = {
   moveIssue,
   reorderIssue,
   removeIssue,
+  archiveIssue,
   reload,
   setSelectedProject,
   setSearchQuery,

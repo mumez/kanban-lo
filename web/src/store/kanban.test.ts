@@ -226,6 +226,24 @@ describe("kanbanStore search filter", () => {
   });
 });
 
+describe("kanbanStore.archiveIssue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    kanbanStore.closeModal();
+    kanbanStore.setSelectedProject(null);
+  });
+
+  it("archives the issue via dav.archiveIssue and removes it from the store", async () => {
+    await seed([issue("a", "todo"), issue("b", "todo")]);
+    vi.mocked(dav.archiveIssue).mockResolvedValue(undefined);
+
+    await kanbanStore.archiveIssue(kanbanStore.issues.find((i) => i.id === "a")!);
+
+    expect(dav.archiveIssue).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }));
+    expect(kanbanStore.issues.map((i) => i.id)).toEqual(["b"]);
+  });
+});
+
 describe("kanbanStore.addIssue / saveIssue project field", () => {
   beforeEach(() => {
     vi.clearAllMocks();
