@@ -22,7 +22,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@testing-library/jest-dom": "^6.4.8",
     "@types/dompurify": "^3.0.5",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.0.0",
     "autoprefixer": "^10.4.19",
     "daisyui": "^4.12.10",
     "jsdom": "^24.1.0",
@@ -32,8 +32,5 @@
     "vite": "^8.2.2",
     "vite-plugin-solid": "^2.10.2",
     "vitest": "^5.0.0"
-  },
-  "allowScripts": {
-    "esbuild@0.21.5": true
   }
 }
