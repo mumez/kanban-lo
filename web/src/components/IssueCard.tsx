@@ -74,6 +74,20 @@ const IssueCard: Component<Props> = (props) => {
             </svg>
           </button>
           <button
+            class="btn btn-ghost btn-xs"
+            title="Archive"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm(`Archive "${props.issue.subject}"?`)) {
+                kanbanStore.archiveIssue(props.issue);
+              }
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M4 3a1 1 0 00-1 1v2a1 1 0 001 1v8a2 2 0 002 2h8a2 2 0 002-2V7a1 1 0 001-1V4a1 1 0 00-1-1H4zm2 4h8v8H6V7zm2 2v4h4V9H8z" />
+            </svg>
+          </button>
+          <button
             class="btn btn-ghost btn-xs text-error"
             title="Delete"
             onClick={(e) => {

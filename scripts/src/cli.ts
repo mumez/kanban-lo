@@ -6,6 +6,9 @@ import { fetchIssue } from "./commands/fetchIssue";
 import { changeIssue } from "./commands/changeIssue";
 import { createIssue } from "./commands/createIssue";
 import { listProjects } from "./commands/listProjects";
+import { archiveIssue } from "./commands/archiveIssue";
+import { unarchiveIssue } from "./commands/unarchiveIssue";
+import { listArchives } from "./commands/listArchives";
 
 const program = new Command();
 
@@ -80,5 +83,23 @@ program
   .command("list-projects")
   .description("List the admin-maintained projects from issues/_projects.json")
   .action(() => run(() => listProjects()));
+
+program
+  .command("archive-issue")
+  .description("Archive an issue (move its file to _archive/, out of its column)")
+  .requiredOption("--id <id>", "issue id")
+  .action((opts) => run(() => archiveIssue(opts.id)));
+
+program
+  .command("unarchive-issue")
+  .description("Restore an archived issue into a column")
+  .requiredOption("--id <id>", "issue id")
+  .addOption(new Option("--status <column>", "column to restore into").choices(COLUMNS).default("todo"))
+  .action((opts) => run(() => unarchiveIssue({ id: opts.id, status: opts.status })));
+
+program
+  .command("list-archives")
+  .description("List archived issues")
+  .action(() => run(() => listArchives()));
 
 program.parseAsync();

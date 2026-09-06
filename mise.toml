@@ -63,3 +63,18 @@ run = "npx tsx src/cli.ts create-issue"
 description = "kbl list-projects -- list the admin-maintained projects"
 dir = "scripts"
 run = "npx tsx src/cli.ts list-projects"
+
+[tasks.archive-issue]
+description = "kbl archive-issue -- archive an issue (e.g. mise run archive-issue -- --id <id>)"
+dir = "scripts"
+run = "npx tsx src/cli.ts archive-issue"
+
+[tasks.unarchive-issue]
+description = "kbl unarchive-issue -- restore an archived issue (e.g. mise run unarchive-issue -- --id <id> --status todo)"
+dir = "scripts"
+run = "npx tsx src/cli.ts unarchive-issue"
+
+[tasks.list-archives]
+description = "kbl list-archives -- list archived issues"
+dir = "scripts"
+run = "npx tsx src/cli.ts list-archives"

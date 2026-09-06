@@ -35,6 +35,12 @@ function davPath(column: Column, id: string): string {
   return `/${column}/${id}.md`;
 }
 
+const ARCHIVE_DIR = "_archive";
+
+function archivePath(id: string): string {
+  return `/${ARCHIVE_DIR}/${id}.md`;
+}
+
 function orderPath(column: Column): string {
   return `/${column}/${ORDER_FILENAME}`;
 }
@@ -210,4 +216,69 @@ export async function changeIssueStatus(issue: Issue, toColumn: Column): Promise
   await insertAtTopOfOrder(toColumn, issue.id);
 
   return { ...issue, status: toColumn };
+}
+
+// ----------------------------------------------------------------
+// Archive (_archive/, outside any column)
+// ----------------------------------------------------------------
+
+/** An issue sitting in _archive/ — it has no column, so no `status`. */
+export interface ArchivedIssue {
+  id: string;
+  subject: string;
+  content: string;
+  project?: string;
+}
+
+/** Archive an issue: move its file to _archive/, out of its current column. */
+export async function archiveIssue(issue: Issue): Promise<void> {
+  const client = getClient();
+  await client.moveFile(davPath(issue.status, issue.id), archivePath(issue.id));
+  await removeFromOrder(issue.status, issue.id);
+}
+
+/** Restore an archived issue into a column, appending it to that column's existing order (if any). */
+export async function unarchiveIssue(id: string, toColumn: Column): Promise<Issue> {
+  const client = getClient();
+  const text = (await client.getFileContents(archivePath(id), { format: "text" })) as string;
+  const { subject, content, project } = parseMarkdown(text);
+
+  await client.moveFile(archivePath(id), davPath(toColumn, id));
+  await addToOrder(toColumn, id);
+
+  return project
+    ? { id, subject, content, status: toColumn, project }
+    : { id, subject, content, status: toColumn };
+}
+
+/** List all issues sitting in _archive/. */
+export async function listArchivedIssues(): Promise<ArchivedIssue[]> {
+  const client = getClient();
+
+  let items: FileStat[];
+  try {
+    const result = await client.getDirectoryContents(`/${ARCHIVE_DIR}`);
+    items = Array.isArray(result) ? result : (result as { data: FileStat[] }).data;
+  } catch {
+    return [];
+  }
+
+  const mdFiles = items.filter((item) => item.type === "file" && item.basename.endsWith(".md"));
+
+  const issues = await Promise.all(
+    mdFiles.map(async (item): Promise<ArchivedIssue | null> => {
+      try {
+        const id = item.basename.replace(/\.md$/, "");
+        const text = (await client.getFileContents(archivePath(id), {
+          format: "text",
+        })) as string;
+        const { subject, content, project } = parseMarkdown(text);
+        return project ? { id, subject, content, project } : { id, subject, content };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return issues.filter((i): i is ArchivedIssue => i !== null);
 }

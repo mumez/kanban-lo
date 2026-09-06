@@ -52,6 +52,14 @@ describe("webdav service (integration)", () => {
     expect((await dav.listIssues("todo")).some((i) => i.id === created.id)).toBe(false);
   });
 
+  it("moves an archived issue's file out of its column", async () => {
+    const created = await dav.createIssue("todo", `Integration ${Date.now()}`, "body");
+
+    await dav.archiveIssue(created);
+
+    expect((await dav.listIssues("todo")).some((i) => i.id === created.id)).toBe(false);
+  });
+
   it("round-trips a project set on createIssue and preserved through updateIssue", async () => {
     const created = await dav.createIssue(
       "todo",
@@ -150,6 +158,17 @@ describe("webdav service (integration)", () => {
       await dav.saveOrder("todo", [`${a.id}.md`, `${b.id}.md`]);
 
       await dav.deleteIssue(a);
+
+      expect(await dav.loadOrder("todo")).toEqual([`${b.id}.md`]);
+    });
+
+    it("removes an archived issue from an existing order", async () => {
+      const a = await dav.createIssue("todo", `Sync G ${Date.now()}`, "");
+      const b = await dav.createIssue("todo", `Sync H ${Date.now()}`, "");
+      cleanup.push({ column: "todo", id: b.id });
+      await dav.saveOrder("todo", [`${a.id}.md`, `${b.id}.md`]);
+
+      await dav.archiveIssue(a);
 
       expect(await dav.loadOrder("todo")).toEqual([`${b.id}.md`]);
     });
