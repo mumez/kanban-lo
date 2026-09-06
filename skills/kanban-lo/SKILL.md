@@ -1,6 +1,6 @@
 ---
 name: kanban-lo
-description: Operate a Kanban-lo board (list, fetch, create, and change issues, and look up admin-maintained projects) via the `kbl` CLI, run through `mise run` from $KBL_HOME. Use when the user asks to list/view/create/update issues "on kanban", "on the kanban board", "on kanban-lo", or "with kbl", or needs to know which projects exist before filing a new issue.
+description: Operate a Kanban-lo board (list, fetch, create, change, archive, and unarchive issues, and look up admin-maintained projects) via the `kbl` CLI, run through `mise run` from $KBL_HOME. Use when the user asks to list/view/create/update/archive issues "on kanban", "on the kanban board", "on kanban-lo", or "with kbl", or needs to know which projects exist before filing a new issue.
 ---
 
 # kanban-lo
@@ -18,6 +18,9 @@ issue board with four columns: `todo`, `working`, `done`, `pending`.
   directory.
 - Always put `--` between the task name and its flags: `mise run <task> -- <flags>`. Without it,
   `mise` will not forward the flags to the underlying `kbl` command.
+- If you haven't confirmed `$KBL_HOME`/`KBL_DAV_BASE` are set in this session, run `echo
+  "$KBL_HOME" "$KBL_DAV_BASE"` once before the first command rather than assuming; if `KBL_HOME`
+  is empty, ask the user for the checkout path instead of guessing one.
 
 ## Commands
 
@@ -36,7 +39,8 @@ mise run list-issues -- --status <column> --max <n>
 If the user asks to list issues without naming a column, default `--status` to `todo`.
 
 Output: one line per issue, `<id>\t<subject> [<project>]` (project omitted if unset), most
-priority-first. If empty: `No issues in "<status>".`
+priority-first — the first line is "the top issue" if the user refers to one that way. If empty:
+`No issues in "<status>".`
 
 If it fails: `--status` omitted → CLI exits non-zero asking for `--status`; ask the user which
 column, or default to `todo` per the convention above.
@@ -124,6 +128,11 @@ new, separate project.
 If it fails: `--subject` omitted → CLI rejects the command; ask the user for a subject before
 retrying, don't invent a placeholder one.
 
+### Archiving — `archive-issue`, `unarchive-issue`, `list-archives`
+
+Rarely used. If the user's request involves archiving, unarchiving, or listing archived issues,
+read [references/archive.md](references/archive.md) for the full command details before acting.
+
 ## Intent → command examples
 
 - "kanbanから最新10件のissue取って" (fetch the latest 10 issues from kanban)
@@ -144,6 +153,10 @@ retrying, don't invent a placeholder one.
   this bug as an issue on kanban; the project is probably ExampleProject)
   → `mise run list-projects` to confirm the exact existing name, then
   `mise run create-issue -- --subject "..." --project "<confirmed name>"`
+
+- "kanbanのexample-issueをアーカイブして" (archive example-issue on kanban)
+  → read [references/archive.md](references/archive.md), then
+  `mise run archive-issue -- --id "example-issue"`
 
 ## Errors
 
