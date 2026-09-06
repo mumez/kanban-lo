@@ -97,24 +97,9 @@ Requests to `/dav/*` are automatically proxied by Vite to `localhost:8282`.
 
 ## Admin CLI (kbl)
 
-`scripts/` is a standalone Node + TypeScript project providing `kbl`, a CLI that manages issues over WebDAV (no build step, run via `tsx`). Useful for admins or coding agents that need to inspect/manipulate issues without the browser UI.
+`scripts/` is a standalone Node + TypeScript project providing `kbl`, a CLI that manages issues over WebDAV (no build step, run via `tsx`). Useful for admins or coding agents that need to inspect/manipulate issues without the browser UI — list, fetch, create, change status/content, archive/unarchive, and browse the admin-maintained project list.
 
-```bash
-cd scripts
-npm install
-
-# Point at your WebDAV server (defaults to http://localhost:8282/dav)
-export KBL_DAV_BASE=http://localhost:8282/dav   # or pass --dav-base <url> per command
-
-npx tsx src/cli.ts list-issues --status todo --max 10  # both optional; defaults shown
-npx tsx src/cli.ts fetch-issue --id "1753600000000-example-issue"
-npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done --append-content "Append content"
-npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --content "New content"
-npx tsx src/cli.ts create-issue --project project-a --subject "New subject" --content "New content"
-npx tsx src/cli.ts list-projects
-```
-
-Run `npx tsx src/cli.ts <subcommand> --help` for the full option list. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`).
+See [scripts/README.md](scripts/README.md) for the full command reference.
 
 ## Coding agent skill
 
@@ -148,10 +133,13 @@ mise run list-issues -- --status todo --max 10
 mise run fetch-issue -- --id <id>
 mise run change-issue -- --id <id> --status done
 mise run create-issue -- --subject "new subject"
+mise run archive-issue -- --id <id>
+mise run unarchive-issue -- --id <id> --status todo
+mise run list-archives
 mise run list-projects
 ```
 
-Run `mise tasks` to see the full list.
+Run `mise tasks` to see the full list, or [scripts/README.md](scripts/README.md) for the underlying `kbl` command reference.
 
 ## Testing
 

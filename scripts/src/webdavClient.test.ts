@@ -194,3 +194,83 @@ describe("changeIssueStatus", () => {
     );
   });
 });
+
+describe("archiveIssue", () => {
+  it("moves the file to _archive/ and removes it from the source column's order", async () => {
+    const dav = await loadWebdavClient();
+    client.moveFile.mockResolvedValue(undefined);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/_order.json") return Promise.resolve(JSON.stringify(["abc.md", "x.md"]));
+      return Promise.reject(new Error("404"));
+    });
+    client.putFileContents.mockResolvedValue(undefined);
+
+    const issue = { id: "abc", subject: "S", content: "", status: "todo" as const };
+    await dav.archiveIssue(issue);
+
+    expect(client.moveFile).toHaveBeenCalledWith("/todo/abc.md", "/_archive/abc.md");
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/todo/_order.json",
+      JSON.stringify(["x.md"]),
+      { overwrite: true }
+    );
+  });
+});
+
+describe("unarchiveIssue", () => {
+  it("moves the file from _archive/ into the given column and appends it to an existing order", async () => {
+    const dav = await loadWebdavClient();
+    client.moveFile.mockResolvedValue(undefined);
+    client.putFileContents.mockResolvedValue(undefined);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/_archive/abc.md") return Promise.resolve("# Subject\n\nBody");
+      if (path === "/todo/_order.json") return Promise.resolve(JSON.stringify(["existing.md"]));
+      return Promise.reject(new Error("404"));
+    });
+
+    const issue = await dav.unarchiveIssue("abc", "todo");
+
+    expect(issue).toEqual({ id: "abc", subject: "Subject", content: "Body", status: "todo" });
+    expect(client.moveFile).toHaveBeenCalledWith("/_archive/abc.md", "/todo/abc.md");
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/todo/_order.json",
+      JSON.stringify(["existing.md", "abc.md"]),
+      { overwrite: true }
+    );
+  });
+
+  it("rejects when the archived file doesn't exist", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockRejectedValue(new Error("404"));
+
+    await expect(dav.unarchiveIssue("missing", "todo")).rejects.toThrow();
+    expect(client.moveFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("listArchivedIssues", () => {
+  it("returns an empty array when _archive/ doesn't exist", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockRejectedValue(new Error("404"));
+
+    expect(await dav.listArchivedIssues()).toEqual([]);
+  });
+
+  it("lists parsed issues from _archive/, without a status field", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "abc.md" },
+      { type: "file", basename: "_order.json" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/_archive/abc.md") return Promise.resolve("---\nproject: project-a\n---\n# Subject\n\nBody");
+      return Promise.reject(new Error("404"));
+    });
+
+    const issues = await dav.listArchivedIssues();
+
+    expect(issues).toEqual([
+      { id: "abc", subject: "Subject", content: "Body", project: "project-a" },
+    ]);
+  });
+});
