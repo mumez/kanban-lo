@@ -8,6 +8,7 @@ import {
   sortByOrder,
   ORDER_FILENAME,
 } from "../lib/issue-format";
+import { rethrowUnlessNotFound } from "../lib/webdav-errors";
 
 export { parseMarkdown, serializeMarkdown, generateId, sortByOrder };
 
@@ -46,8 +47,9 @@ export async function loadOrder(column: Column): Promise<string[]> {
     })) as string;
     const parsed = JSON.parse(text);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    // No order file yet, or it's unreadable/invalid — fall back to default order.
+  } catch (err) {
+    // No order file yet — fall back to default order.
+    rethrowUnlessNotFound(err);
     return [];
   }
 }
@@ -96,8 +98,9 @@ export async function listIssues(column: Column): Promise<Issue[]> {
   try {
     const result = await client.getDirectoryContents(`/${column}`);
     items = Array.isArray(result) ? result : (result as { data: FileStat[] }).data;
-  } catch {
-    // Directory empty or missing
+  } catch (err) {
+    // Column directory missing
+    rethrowUnlessNotFound(err);
     return [];
   }
 
@@ -118,6 +121,8 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         const { subject, content, project } = parseMarkdown(text);
         return { id, subject, content, status: column, project };
       } catch {
+        // Skip just this file (removed mid-listing, unreadable, transient
+        // failure) rather than failing the whole listing.
         return null;
       }
     })
@@ -196,6 +201,7 @@ export async function loadAllIssues(): Promise<Issue[]> {
 /**
  * Load the admin-maintained project list from issues/_projects.json.
  * Empty when the file is absent — the UI treats that as "no project filter".
+ * Any other failure (e.g. unreachable server) is thrown.
  */
 export async function loadProjects(): Promise<string[]> {
   const client = getClient();
@@ -205,7 +211,8 @@ export async function loadProjects(): Promise<string[]> {
     })) as string;
     const parsed = JSON.parse(text);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
+    rethrowUnlessNotFound(err);
     return [];
   }
 }
