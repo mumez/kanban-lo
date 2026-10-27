@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { createClient } from "webdav";
 import { parseMarkdown, serializeMarkdown, generateId, sortByOrder } from "./webdav";
 import type { Issue } from "../types";
+
+vi.mock("webdav", () => ({
+  createClient: vi.fn(),
+}));
 
 function issue(id: string): Issue {
   return { id, subject: id, content: "", status: "todo" };
@@ -124,5 +129,104 @@ describe("sortByOrder", () => {
     const issues = [issue("a"), issue("b")];
     const sorted = sortByOrder(issues, ["ghost.md", "b.md", "a.md"]);
     expect(sorted.map((i) => i.id)).toEqual(["b", "a"]);
+  });
+});
+
+// Mirrors the webdav package's error shape: an Error carrying the HTTP status.
+function httpError(status: number) {
+  return Object.assign(new Error(`Invalid response: ${status}`), { status });
+}
+
+function fakeClient() {
+  return {
+    getFileContents: vi.fn(),
+    getDirectoryContents: vi.fn(),
+  };
+}
+
+let client: ReturnType<typeof fakeClient>;
+
+// webdav.ts caches its client lazily; re-importing with a fresh module
+// registry keeps each test's mock client isolated.
+async function loadWebdavService() {
+  vi.resetModules();
+  client = fakeClient();
+  vi.mocked(createClient).mockReturnValue(client as any);
+  return import("./webdav");
+}
+
+describe("not-found handling", () => {
+  it("treats a missing _projects.json as no projects", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(httpError(404));
+
+    expect(await dav.loadProjects()).toEqual([]);
+  });
+
+  it("rethrows a non-404 failure when loading projects", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(new Error("Failed to fetch"));
+
+    await expect(dav.loadProjects()).rejects.toThrow("Failed to fetch");
+  });
+
+  it("treats a missing _order.json as no saved order", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(httpError(404));
+
+    expect(await dav.loadOrder("todo")).toEqual([]);
+  });
+
+  it("rethrows a non-404 failure when loading the order", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(httpError(500));
+
+    await expect(dav.loadOrder("todo")).rejects.toThrow("500");
+  });
+
+  it("treats a missing column directory as an empty column", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockRejectedValue(httpError(404));
+
+    expect(await dav.listIssues("todo")).toEqual([]);
+  });
+
+  it("rethrows a non-404 failure when listing a column", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockRejectedValue(httpError(401));
+
+    await expect(dav.listIssues("todo")).rejects.toThrow("401");
+  });
+
+  it("skips an issue file that disappeared after the listing", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "gone.md" },
+      { type: "file", basename: "kept.md" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) =>
+      path === "/todo/kept.md" ? Promise.resolve("# Kept\n\nBody") : Promise.reject(httpError(404))
+    );
+
+    const issues = await dav.listIssues("todo");
+
+    expect(issues.map((i) => i.id)).toEqual(["kept"]);
+  });
+
+  it("skips a single unreadable issue file instead of failing the whole column", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "flaky.md" },
+      { type: "file", basename: "kept.md" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/kept.md") return Promise.resolve("# Kept\n\nBody");
+      if (path === "/todo/flaky.md") return Promise.reject(httpError(500));
+      return Promise.reject(httpError(404)); // no _order.json
+    });
+
+    const issues = await dav.listIssues("todo");
+
+    expect(issues.map((i) => i.id)).toEqual(["kept"]);
   });
 });
