@@ -7,8 +7,8 @@ import {
   generateId,
   sortByOrder,
   ORDER_FILENAME,
-  rethrowUnlessNotFound,
 } from "../lib/issue-format";
+import { rethrowUnlessNotFound } from "../lib/webdav-errors";
 
 export { parseMarkdown, serializeMarkdown, generateId, sortByOrder };
 
@@ -120,9 +120,9 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return { id, subject, content, status: column, project };
-      } catch (err) {
-        // File removed between the listing and this read
-        rethrowUnlessNotFound(err);
+      } catch {
+        // Skip just this file (removed mid-listing, unreadable, transient
+        // failure) rather than failing the whole listing.
         return null;
       }
     })

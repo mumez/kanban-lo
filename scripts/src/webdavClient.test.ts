@@ -127,6 +127,32 @@ describe("getIssue", () => {
   });
 });
 
+describe("listIssues", () => {
+  it("rethrows a non-404 failure when listing the column", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockRejectedValue(httpError(401));
+
+    await expect(dav.listIssues("todo")).rejects.toThrow("401");
+  });
+
+  it("skips a single unreadable issue file instead of failing the whole column", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "flaky.md" },
+      { type: "file", basename: "kept.md" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/kept.md") return Promise.resolve("# Kept\n\nBody");
+      if (path === "/todo/flaky.md") return Promise.reject(httpError(500));
+      return Promise.reject(notFound()); // no _order.json
+    });
+
+    const issues = await dav.listIssues("todo");
+
+    expect(issues.map((i) => i.id)).toEqual(["kept"]);
+  });
+});
+
 describe("createIssue", () => {
   it("writes the markdown file and leaves _order.json untouched when none exists yet", async () => {
     const dav = await loadWebdavClient();
@@ -291,6 +317,21 @@ describe("listArchivedIssues", () => {
     client.getDirectoryContents.mockRejectedValue(httpError(500));
 
     await expect(dav.listArchivedIssues()).rejects.toThrow("500");
+  });
+
+  it("skips a single unreadable archived file instead of failing the whole listing", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "flaky.md" },
+      { type: "file", basename: "kept.md" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) =>
+      path === "/_archive/kept.md" ? Promise.resolve("# Kept\n\nBody") : Promise.reject(httpError(500))
+    );
+
+    const issues = await dav.listArchivedIssues();
+
+    expect(issues.map((i) => i.id)).toEqual(["kept"]);
   });
 
   it("lists parsed issues from _archive/, without a status field", async () => {

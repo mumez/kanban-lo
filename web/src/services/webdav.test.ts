@@ -212,4 +212,21 @@ describe("not-found handling", () => {
 
     expect(issues.map((i) => i.id)).toEqual(["kept"]);
   });
+
+  it("skips a single unreadable issue file instead of failing the whole column", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockResolvedValue([
+      { type: "file", basename: "flaky.md" },
+      { type: "file", basename: "kept.md" },
+    ]);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/kept.md") return Promise.resolve("# Kept\n\nBody");
+      if (path === "/todo/flaky.md") return Promise.reject(httpError(500));
+      return Promise.reject(httpError(404)); // no _order.json
+    });
+
+    const issues = await dav.listIssues("todo");
+
+    expect(issues.map((i) => i.id)).toEqual(["kept"]);
+  });
 });

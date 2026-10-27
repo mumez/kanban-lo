@@ -8,8 +8,8 @@ import {
   generateId,
   sortByOrder,
   ORDER_FILENAME,
-  rethrowUnlessNotFound,
 } from "../../web/src/lib/issue-format";
+import { rethrowUnlessNotFound } from "../../web/src/lib/webdav-errors";
 
 export { COLUMNS };
 
@@ -140,8 +140,9 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return { id, subject, content, status: column, project };
-      } catch (err) {
-        rethrowUnlessNotFound(err);
+      } catch {
+        // Skip just this file (removed mid-listing, unreadable, transient
+        // failure) rather than failing the whole listing.
         return null;
       }
     })
@@ -281,8 +282,9 @@ export async function listArchivedIssues(): Promise<ArchivedIssue[]> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return project ? { id, subject, content, project } : { id, subject, content };
-      } catch (err) {
-        rethrowUnlessNotFound(err);
+      } catch {
+        // Skip just this file (removed mid-listing, unreadable, transient
+        // failure) rather than failing the whole listing.
         return null;
       }
     })
