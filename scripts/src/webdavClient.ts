@@ -8,6 +8,7 @@ import {
   generateId,
   sortByOrder,
   ORDER_FILENAME,
+  rethrowUnlessNotFound,
 } from "../../web/src/lib/issue-format";
 
 export { COLUMNS };
@@ -58,7 +59,8 @@ export async function loadOrder(column: Column): Promise<string[]> {
     })) as string;
     const parsed = JSON.parse(text);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
+    rethrowUnlessNotFound(err);
     return [];
   }
 }
@@ -94,7 +96,7 @@ async function insertAtTopOfOrder(column: Column, id: string): Promise<void> {
 
 /**
  * Load the admin-maintained project list from issues/_projects.json.
- * Empty when the file is absent.
+ * Empty when the file is absent; any other failure (e.g. unreachable server) is thrown.
  */
 export async function listProjects(): Promise<string[]> {
   const client = getClient();
@@ -104,7 +106,8 @@ export async function listProjects(): Promise<string[]> {
     })) as string;
     const parsed = JSON.parse(text);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (err) {
+    rethrowUnlessNotFound(err);
     return [];
   }
 }
@@ -121,7 +124,8 @@ export async function listIssues(column: Column): Promise<Issue[]> {
   try {
     const result = await client.getDirectoryContents(`/${column}`);
     items = Array.isArray(result) ? result : (result as { data: FileStat[] }).data;
-  } catch {
+  } catch (err) {
+    rethrowUnlessNotFound(err);
     return [];
   }
 
@@ -136,7 +140,8 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return { id, subject, content, status: column, project };
-      } catch {
+      } catch (err) {
+        rethrowUnlessNotFound(err);
         return null;
       }
     })
@@ -157,7 +162,8 @@ export async function getIssue(id: string): Promise<Issue | null> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return { id, subject, content, status: column, project } as Issue;
-      } catch {
+      } catch (err) {
+        rethrowUnlessNotFound(err);
         return null;
       }
     })
@@ -259,7 +265,8 @@ export async function listArchivedIssues(): Promise<ArchivedIssue[]> {
   try {
     const result = await client.getDirectoryContents(`/${ARCHIVE_DIR}`);
     items = Array.isArray(result) ? result : (result as { data: FileStat[] }).data;
-  } catch {
+  } catch (err) {
+    rethrowUnlessNotFound(err);
     return [];
   }
 
@@ -274,7 +281,8 @@ export async function listArchivedIssues(): Promise<ArchivedIssue[]> {
         })) as string;
         const { subject, content, project } = parseMarkdown(text);
         return project ? { id, subject, content, project } : { id, subject, content };
-      } catch {
+      } catch (err) {
+        rethrowUnlessNotFound(err);
         return null;
       }
     })

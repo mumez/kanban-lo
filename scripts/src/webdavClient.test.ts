@@ -15,6 +15,15 @@ function fakeClient() {
   };
 }
 
+// Mirrors the webdav package's error shape: an Error carrying the HTTP status.
+function httpError(status: number) {
+  return Object.assign(new Error(`Invalid response: ${status}`), { status });
+}
+
+function notFound() {
+  return httpError(404);
+}
+
 let client: ReturnType<typeof fakeClient>;
 
 // webdavClient.ts caches its client lazily; re-importing per test with a
@@ -33,9 +42,16 @@ beforeEach(() => {
 describe("loadOrder / saveOrder", () => {
   it("returns an empty array when _order.json doesn't exist", async () => {
     const dav = await loadWebdavClient();
-    client.getFileContents.mockRejectedValue(new Error("404"));
+    client.getFileContents.mockRejectedValue(notFound());
 
     expect(await dav.loadOrder("todo")).toEqual([]);
+  });
+
+  it("rethrows errors other than 404", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockRejectedValue(httpError(500));
+
+    await expect(dav.loadOrder("todo")).rejects.toThrow("500");
   });
 
   it("parses the saved order file", async () => {
@@ -62,9 +78,16 @@ describe("loadOrder / saveOrder", () => {
 describe("listProjects", () => {
   it("returns an empty array when _projects.json doesn't exist", async () => {
     const dav = await loadWebdavClient();
-    client.getFileContents.mockRejectedValue(new Error("404"));
+    client.getFileContents.mockRejectedValue(notFound());
 
     expect(await dav.listProjects()).toEqual([]);
+  });
+
+  it("rethrows connection errors instead of returning an empty list", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    await expect(dav.listProjects()).rejects.toThrow("ECONNREFUSED");
   });
 
   it("parses the projects file", async () => {
@@ -81,7 +104,7 @@ describe("getIssue", () => {
     const dav = await loadWebdavClient();
     client.getFileContents.mockImplementation((path: string) => {
       if (path === "/working/abc.md") return Promise.resolve("# Subject\n\nBody");
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound());
     });
 
     const issue = await dav.getIssue("abc");
@@ -91,9 +114,16 @@ describe("getIssue", () => {
 
   it("returns null when the id isn't in any column", async () => {
     const dav = await loadWebdavClient();
-    client.getFileContents.mockRejectedValue(new Error("404"));
+    client.getFileContents.mockRejectedValue(notFound());
 
     expect(await dav.getIssue("missing")).toBeNull();
+  });
+
+  it("rethrows errors other than 404", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockRejectedValue(httpError(401));
+
+    await expect(dav.getIssue("abc")).rejects.toThrow("401");
   });
 });
 
@@ -101,7 +131,7 @@ describe("createIssue", () => {
   it("writes the markdown file and leaves _order.json untouched when none exists yet", async () => {
     const dav = await loadWebdavClient();
     client.putFileContents.mockResolvedValue(undefined);
-    client.getFileContents.mockRejectedValue(new Error("404")); // no _order.json
+    client.getFileContents.mockRejectedValue(notFound()); // no _order.json
 
     const issue = await dav.createIssue("todo", "New issue", "body", "project-a");
 
@@ -174,7 +204,7 @@ describe("changeIssueStatus", () => {
     client.getFileContents.mockImplementation((path: string) => {
       if (path === "/todo/_order.json") return Promise.resolve(JSON.stringify(["abc.md", "x.md"]));
       if (path === "/done/_order.json") return Promise.resolve(JSON.stringify(["y.md"]));
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound());
     });
 
     const issue = { id: "abc", subject: "S", content: "", status: "todo" as const };
@@ -201,7 +231,7 @@ describe("archiveIssue", () => {
     client.moveFile.mockResolvedValue(undefined);
     client.getFileContents.mockImplementation((path: string) => {
       if (path === "/todo/_order.json") return Promise.resolve(JSON.stringify(["abc.md", "x.md"]));
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound());
     });
     client.putFileContents.mockResolvedValue(undefined);
 
@@ -225,7 +255,7 @@ describe("unarchiveIssue", () => {
     client.getFileContents.mockImplementation((path: string) => {
       if (path === "/_archive/abc.md") return Promise.resolve("# Subject\n\nBody");
       if (path === "/todo/_order.json") return Promise.resolve(JSON.stringify(["existing.md"]));
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound());
     });
 
     const issue = await dav.unarchiveIssue("abc", "todo");
@@ -241,7 +271,7 @@ describe("unarchiveIssue", () => {
 
   it("rejects when the archived file doesn't exist", async () => {
     const dav = await loadWebdavClient();
-    client.getFileContents.mockRejectedValue(new Error("404"));
+    client.getFileContents.mockRejectedValue(notFound());
 
     await expect(dav.unarchiveIssue("missing", "todo")).rejects.toThrow();
     expect(client.moveFile).not.toHaveBeenCalled();
@@ -251,9 +281,16 @@ describe("unarchiveIssue", () => {
 describe("listArchivedIssues", () => {
   it("returns an empty array when _archive/ doesn't exist", async () => {
     const dav = await loadWebdavClient();
-    client.getDirectoryContents.mockRejectedValue(new Error("404"));
+    client.getDirectoryContents.mockRejectedValue(notFound());
 
     expect(await dav.listArchivedIssues()).toEqual([]);
+  });
+
+  it("rethrows errors other than 404", async () => {
+    const dav = await loadWebdavClient();
+    client.getDirectoryContents.mockRejectedValue(httpError(500));
+
+    await expect(dav.listArchivedIssues()).rejects.toThrow("500");
   });
 
   it("lists parsed issues from _archive/, without a status field", async () => {
@@ -264,7 +301,7 @@ describe("listArchivedIssues", () => {
     ]);
     client.getFileContents.mockImplementation((path: string) => {
       if (path === "/_archive/abc.md") return Promise.resolve("---\nproject: project-a\n---\n# Subject\n\nBody");
-      return Promise.reject(new Error("404"));
+      return Promise.reject(notFound());
     });
 
     const issues = await dav.listArchivedIssues();
