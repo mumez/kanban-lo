@@ -2,6 +2,7 @@ import { createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
 import { COLUMNS } from "../types";
+import { visibleColumns as columnsExceptHidden } from "../lib/issue-format";
 import * as dav from "../services/webdav";
 
 // ----------------------------------------------------------------
@@ -10,12 +11,23 @@ import * as dav from "../services/webdav";
 
 const [issues, setIssues] = createStore<Issue[]>([]);
 
-/** Reload all issues and the project list from WebDAV */
+/** Columns omitted from the Web UI, from issues/_settings.json. Empty shows every column. */
+const [hiddenStatuses, setHiddenStatuses] = createSignal<Column[]>([]);
+
+/** Reload issues, the project list, and board settings from WebDAV */
 async function reload() {
-  const [all, projectList] = await Promise.all([dav.loadAllIssues(), dav.loadProjects()]);
+  const [all, projectList, settings] = await Promise.all([
+    dav.loadAllIssues(),
+    dav.loadProjects(),
+    dav.loadSettings(),
+  ]);
   setIssues(all);
   const list = Array.isArray(projectList) ? projectList : [];
   setProjects(list);
+  const hidden = settings?.hiddenStatuses;
+  setHiddenStatuses(
+    Array.isArray(hidden) ? hidden.filter((status) => COLUMNS.includes(status)) : []
+  );
   const selected = selectedProject();
   if (selected !== null && !list.includes(selected)) {
     setSelectedProject(null);
@@ -319,6 +331,9 @@ export const kanbanStore = {
   // derived
   issuesByColumn,
   visibleIssuesByColumn,
+  get visibleColumns() {
+    return columnsExceptHidden(hiddenStatuses());
+  },
 
   // modal actions
   openCreateModal,

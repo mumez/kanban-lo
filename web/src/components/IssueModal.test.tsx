@@ -16,10 +16,14 @@ async function seedAndEdit(issue: Issue) {
 }
 
 describe("IssueModal", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     kanbanStore.closeModal();
     kanbanStore.setSelectedProject(null);
+    vi.mocked(dav.loadAllIssues).mockResolvedValue([]);
+    vi.mocked(dav.loadProjects).mockResolvedValue([]);
+    vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: [] });
+    await kanbanStore.reload();
   });
 
   it("is not rendered when the modal is closed", () => {
@@ -154,5 +158,24 @@ describe("IssueModal", () => {
     render(() => <IssueModal />);
 
     expect(screen.getByRole("combobox", { name: "Project" })).toHaveValue("project-a");
+  });
+
+  it("offers reviewing in the column dropdown when nothing is hidden", () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    expect(screen.getByRole("option", { name: "Reviewing" })).toBeInTheDocument();
+  });
+
+  it("omits columns listed in hiddenStatuses from the column dropdown", async () => {
+    vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["reviewing"] });
+    await kanbanStore.reload();
+
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    expect(screen.queryByRole("option", { name: "Reviewing" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Todo" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Done" })).toBeInTheDocument();
   });
 });

@@ -7,14 +7,14 @@ import {
   type DragEventHandler,
 } from "@thisbeyond/solid-dnd";
 import type { Column } from "../types";
-import { COLUMNS } from "../types";
 import { kanbanStore } from "../store/kanban";
 import KanbanColumn from "./KanbanColumn";
 
 /** Which column an id belongs to: a column droppable (empty-area drop) or a card's column */
 function columnOf(id: string | number): Column | undefined {
-  if ((COLUMNS as (string | number)[]).includes(id)) return id as Column;
-  return COLUMNS.find((column) =>
+  const columns = kanbanStore.visibleColumns;
+  if ((columns as (string | number)[]).includes(id)) return id as Column;
+  return columns.find((column) =>
     kanbanStore.issuesByColumn(column).some((issue) => issue.id === id)
   );
 }
@@ -36,8 +36,14 @@ const Board: Component = () => {
   return (
     <DragDropProvider onDragEnd={handleDragEnd} collisionDetector={closestCenter}>
       <DragDropSensors>
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-4">
-          <For each={COLUMNS}>
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4"
+          classList={{
+            "xl:grid-cols-4": kanbanStore.visibleColumns.length <= 4,
+            "xl:grid-cols-5": kanbanStore.visibleColumns.length > 4,
+          }}
+        >
+          <For each={kanbanStore.visibleColumns}>
             {(column) => <KanbanColumn column={column} />}
           </For>
         </div>

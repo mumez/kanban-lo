@@ -170,6 +170,35 @@ describe("not-found handling", () => {
     await expect(dav.loadProjects()).rejects.toThrow("Failed to fetch");
   });
 
+  it("treats a missing _settings.json as no hidden statuses", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(httpError(404));
+
+    expect(await dav.loadSettings()).toEqual({ hiddenStatuses: [] });
+  });
+
+  it("reads hiddenStatuses from _settings.json", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockResolvedValue('{"hiddenStatuses":["reviewing","nope"]}');
+
+    expect(await dav.loadSettings()).toEqual({ hiddenStatuses: ["reviewing"] });
+    expect(client.getFileContents).toHaveBeenCalledWith("/_settings.json", { format: "text" });
+  });
+
+  it("rethrows invalid settings JSON", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockResolvedValue("{");
+
+    await expect(dav.loadSettings()).rejects.toThrow();
+  });
+
+  it("rethrows a non-404 failure when loading settings", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(new Error("Failed to fetch"));
+
+    await expect(dav.loadSettings()).rejects.toThrow("Failed to fetch");
+  });
+
   it("treats a missing _order.json as no saved order", async () => {
     const dav = await loadWebdavService();
     client.getFileContents.mockRejectedValue(httpError(404));

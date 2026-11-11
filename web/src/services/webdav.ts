@@ -1,12 +1,16 @@
 import { createClient, type WebDAVClient, type FileStat } from "webdav";
 import {
+  type BoardSettings,
   type Column,
   type Issue,
+  COLUMNS,
   parseMarkdown,
   serializeMarkdown,
   generateId,
   sortByOrder,
+  parseSettings,
   ORDER_FILENAME,
+  SETTINGS_FILENAME,
 } from "../lib/issue-format";
 import { rethrowUnlessNotFound } from "../lib/webdav-errors";
 
@@ -193,9 +197,26 @@ export async function archiveIssue(issue: Issue): Promise<void> {
 
 /** Load issues from all columns */
 export async function loadAllIssues(): Promise<Issue[]> {
-  const columns: Column[] = ["todo", "working", "done", "pending"];
-  const results = await Promise.all(columns.map(listIssues));
+  const results = await Promise.all(COLUMNS.map(listIssues));
   return results.flat();
+}
+
+/**
+ * Load admin-maintained display settings from issues/_settings.json.
+ * A missing file means "hide nothing" — every column is shown.
+ * Invalid JSON and any non-404 failure are thrown.
+ */
+export async function loadSettings(): Promise<BoardSettings> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents(`/${SETTINGS_FILENAME}`, {
+      format: "text",
+    })) as string;
+    return parseSettings(text);
+  } catch (err) {
+    rethrowUnlessNotFound(err);
+    return { hiddenStatuses: [] };
+  }
 }
 
 /**

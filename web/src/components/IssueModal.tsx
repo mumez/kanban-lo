@@ -1,6 +1,6 @@
-import { type Component, createSignal, createEffect, Show } from "solid-js";
+import { type Component, createSignal, createEffect, Show, untrack } from "solid-js";
 import { kanbanStore } from "../store/kanban";
-import { COLUMN_LABELS, COLUMNS } from "../types";
+import { COLUMN_LABELS } from "../types";
 import type { Column } from "../types";
 
 const IssueModal: Component = () => {
@@ -20,7 +20,10 @@ const IssueModal: Component = () => {
       } else {
         setSubject("");
         setContent("");
-        setTargetColumn(kanbanStore.modal.column);
+        const requested = kanbanStore.modal.column;
+        // Don't track visibility here — a settings reload must not wipe the form.
+        const visible = untrack(() => kanbanStore.visibleColumns);
+        setTargetColumn(visible.includes(requested) ? requested : (visible[0] ?? "todo"));
         setProject(kanbanStore.selectedProject ?? "");
       }
     }
@@ -110,10 +113,11 @@ const IssueModal: Component = () => {
               </label>
               <select
                 class="select select-bordered w-full"
+                aria-label="Column"
                 value={targetColumn()}
                 onChange={(e) => setTargetColumn(e.currentTarget.value as Column)}
               >
-                {COLUMNS.map((col) => (
+                {kanbanStore.visibleColumns.map((col) => (
                   <option value={col}>{COLUMN_LABELS[col]}</option>
                 ))}
               </select>

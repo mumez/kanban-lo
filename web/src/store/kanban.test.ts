@@ -9,11 +9,31 @@ function issue(id: string, status: Issue["status"]): Issue {
   return { id, subject: id, content: "", status };
 }
 
-async function seed(issues: Issue[], projects: string[] = []) {
+async function seed(issues: Issue[], projects: string[] = [], hiddenStatuses: Issue["status"][] = []) {
   vi.mocked(dav.loadAllIssues).mockResolvedValue(issues);
   vi.mocked(dav.loadProjects).mockResolvedValue(projects);
+  vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses });
   await kanbanStore.reload();
 }
+
+describe("kanbanStore.visibleColumns", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("includes reviewing when settings hide nothing", async () => {
+    await seed([]);
+
+    expect(kanbanStore.visibleColumns).toEqual(["todo", "working", "reviewing", "done", "pending"]);
+  });
+
+  it("omits statuses listed in hiddenStatuses without dropping their issues from the store", async () => {
+    await seed([issue("a", "reviewing"), issue("b", "todo")], [], ["reviewing"]);
+
+    expect(kanbanStore.visibleColumns).toEqual(["todo", "working", "done", "pending"]);
+    expect(kanbanStore.issuesByColumn("reviewing").map((i) => i.id)).toEqual(["a"]);
+  });
+});
 
 describe("kanbanStore.reorderIssue", () => {
   beforeEach(() => {
