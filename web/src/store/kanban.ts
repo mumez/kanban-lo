@@ -24,10 +24,8 @@ async function reload() {
   setIssues(all);
   const list = Array.isArray(projectList) ? projectList : [];
   setProjects(list);
-  const hidden = settings?.hiddenStatuses;
-  setHiddenStatuses(
-    Array.isArray(hidden) ? hidden.filter((status) => COLUMNS.includes(status)) : []
-  );
+  // parseSettings already drops unknown names. A missing file is an empty list.
+  setHiddenStatuses(settings?.hiddenStatuses ?? []);
   const selected = selectedProject();
   if (selected !== null && !list.includes(selected)) {
     setSelectedProject(null);
@@ -333,6 +331,10 @@ export const kanbanStore = {
   visibleIssuesByColumn,
   get visibleColumns() {
     return columnsExceptHidden(hiddenStatuses());
+  },
+  /** Where a new issue lands: the first column still shown, or todo when none are. */
+  get defaultCreateColumn() {
+    return columnsExceptHidden(hiddenStatuses())[0] ?? "todo";
   },
 
   // modal actions

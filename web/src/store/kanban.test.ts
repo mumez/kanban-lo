@@ -33,6 +33,18 @@ describe("kanbanStore.visibleColumns", () => {
     expect(kanbanStore.visibleColumns).toEqual(["todo", "working", "done", "pending"]);
     expect(kanbanStore.issuesByColumn("reviewing").map((i) => i.id)).toEqual(["a"]);
   });
+
+  it("uses the first visible column as the default place for a new issue", async () => {
+    await seed([], [], ["todo"]);
+
+    expect(kanbanStore.defaultCreateColumn).toBe("working");
+  });
+
+  it("uses todo when every column is hidden", async () => {
+    await seed([], [], ["todo", "working", "reviewing", "done", "pending"]);
+
+    expect(kanbanStore.defaultCreateColumn).toBe("todo");
+  });
 });
 
 describe("kanbanStore.reorderIssue", () => {

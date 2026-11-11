@@ -167,6 +167,48 @@ describe("IssueModal", () => {
     expect(screen.getByRole("option", { name: "Reviewing" })).toBeInTheDocument();
   });
 
+  it("creates in the first visible column when the selected one is hidden mid-form", async () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByPlaceholderText("Enter issue title..."), {
+      target: { value: "Still drafting" },
+    });
+
+    vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["todo"] });
+    await kanbanStore.reload();
+
+    expect(screen.getByPlaceholderText("Enter issue title...")).toHaveValue("Still drafting");
+    expect(screen.getByRole("combobox", { name: "Column" })).toHaveValue("working");
+    expect(screen.queryByRole("option", { name: "Todo" })).not.toBeInTheDocument();
+
+    vi.mocked(dav.createIssue).mockResolvedValue({
+      id: "1",
+      subject: "Still drafting",
+      content: "",
+      status: "working",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(dav.createIssue).toHaveBeenCalledWith("working", "Still drafting", "", undefined)
+    );
+  });
+
+  it("does not move an issue when its own column is hidden while it is being edited", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "todo" };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["todo"] });
+    await kanbanStore.reload();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    expect(dav.moveIssue).not.toHaveBeenCalled();
+  });
+
   it("omits columns listed in hiddenStatuses from the column dropdown", async () => {
     vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["reviewing"] });
     await kanbanStore.reload();
