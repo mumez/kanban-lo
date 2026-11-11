@@ -1,6 +1,49 @@
-// Kanban column definitions
-export type Column = "todo" | "working" | "done" | "pending";
-export const COLUMNS: Column[] = ["todo", "working", "done", "pending"];
+// Kanban column definitions. `reviewing` sits between working and done.
+export type Column = "todo" | "working" | "reviewing" | "done" | "pending";
+export const COLUMNS: Column[] = ["todo", "working", "reviewing", "done", "pending"];
+
+// ----------------------------------------------------------------
+// Board settings (issues/_settings.json)
+// ----------------------------------------------------------------
+
+export const SETTINGS_FILENAME = "_settings.json";
+
+/** Admin-maintained display settings. `hiddenStatuses` omits columns from the Web UI. */
+export interface BoardSettings {
+  hiddenStatuses: Column[];
+}
+
+const COLUMN_SET: ReadonlySet<string> = new Set(COLUMNS);
+
+/**
+ * Parse `issues/_settings.json`. A missing `hiddenStatuses`, a non-array
+ * value, or a non-object document means "show every column". Names that
+ * are not columns are ignored. Invalid JSON throws.
+ */
+export function parseSettings(text: string): BoardSettings {
+  const parsed: unknown = JSON.parse(text);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { hiddenStatuses: [] };
+  }
+
+  const raw = (parsed as { hiddenStatuses?: unknown }).hiddenStatuses;
+  if (!Array.isArray(raw)) return { hiddenStatuses: [] };
+
+  const hidden: Column[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const status = entry.trim();
+    if (!COLUMN_SET.has(status) || hidden.includes(status as Column)) continue;
+    hidden.push(status as Column);
+  }
+  return { hiddenStatuses: hidden };
+}
+
+/** Columns in board order, minus any status listed in `hiddenStatuses`. */
+export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
+  const hidden = new Set(hiddenStatuses);
+  return COLUMNS.filter((column) => !hidden.has(column));
+}
 
 // Issue type
 export interface Issue {

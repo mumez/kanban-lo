@@ -6,7 +6,7 @@
 
 /**
  * Swallow only "not found" — the expected case for optional files/dirs such
- * as _order.json, _projects.json or a column with no issues — and rethrow
+ * as _order.json, _projects.json, _settings.json or a column with no issues — and rethrow
  * anything else (connection refused, TLS, 5xx, bad JSON) so it isn't mistaken
  * for an empty result. Relies on the `webdav` package attaching the HTTP
  * status to the errors it throws.

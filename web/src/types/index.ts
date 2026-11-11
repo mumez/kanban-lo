@@ -7,6 +7,7 @@ import type { Column } from "../lib/issue-format";
 export const COLUMN_LABELS: Record<Column, string> = {
   todo: "Todo",
   working: "Working",
+  reviewing: "Reviewing",
   done: "Done",
   pending: "Pending",
 };
@@ -15,6 +16,7 @@ export const COLUMN_LABELS: Record<Column, string> = {
 export const COLUMN_COLORS: Record<Column, string> = {
   todo: "badge-neutral",
   working: "badge-info",
+  reviewing: "badge-secondary",
   done: "badge-success",
   pending: "badge-warning",
 };
