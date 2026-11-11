@@ -1,6 +1,6 @@
-import { type Component, createSignal, createEffect, Show } from "solid-js";
+import { type Component, createSignal, createEffect, Show, untrack } from "solid-js";
 import { kanbanStore } from "../store/kanban";
-import { COLUMN_LABELS, COLUMNS } from "../types";
+import { COLUMN_LABELS } from "../types";
 import type { Column } from "../types";
 
 const IssueModal: Component = () => {
@@ -9,7 +9,20 @@ const IssueModal: Component = () => {
   const [targetColumn, setTargetColumn] = createSignal<Column>("todo");
   const [project, setProject] = createSignal("");
 
-  // Prefill fields whenever the modal opens
+  /**
+   * A column the form may target. A hidden choice snaps to the default
+   * create column, except when editing an issue that already lives there —
+   * hiding its column must not move it.
+   */
+  function columnToShow(target: Column): Column {
+    if (kanbanStore.visibleColumns.includes(target)) return target;
+    const issue = kanbanStore.modal.issue;
+    if (kanbanStore.modal.mode === "edit" && issue) return issue.status;
+    return kanbanStore.defaultCreateColumn;
+  }
+
+  // Prefill fields whenever the modal opens. Visibility is read untracked so
+  // a settings reload does not wipe the title and body.
   createEffect(() => {
     if (kanbanStore.modal.open) {
       if (kanbanStore.modal.mode === "edit" && kanbanStore.modal.issue) {
@@ -20,10 +33,20 @@ const IssueModal: Component = () => {
       } else {
         setSubject("");
         setContent("");
-        setTargetColumn(kanbanStore.modal.column);
+        const requested = kanbanStore.modal.column;
+        setTargetColumn(untrack(() => columnToShow(requested)));
         setProject(kanbanStore.selectedProject ?? "");
       }
     }
+  });
+
+  // If the selected column is hidden while the form is open, move the
+  // selection onto a column the user can still see. Leave the other fields.
+  createEffect(() => {
+    if (!kanbanStore.modal.open) return;
+    const target = targetColumn();
+    const resolved = columnToShow(target);
+    if (resolved !== target) setTargetColumn(resolved);
   });
 
   const handleSubmit = async (e: Event) => {
@@ -31,14 +54,15 @@ const IssueModal: Component = () => {
     const s = subject().trim();
     if (!s) return;
     const p = project() || undefined;
+    const column = columnToShow(targetColumn());
 
     if (kanbanStore.modal.mode === "create") {
-      await kanbanStore.addIssue(targetColumn(), s, content().trim(), p);
+      await kanbanStore.addIssue(column, s, content().trim(), p);
     } else if (kanbanStore.modal.issue) {
       const issue = kanbanStore.modal.issue;
       // Move first if the column changed, then update content
-      if (issue.status !== targetColumn()) {
-        await kanbanStore.moveIssue(issue.id, targetColumn());
+      if (issue.status !== column) {
+        await kanbanStore.moveIssue(issue.id, column);
       }
       await kanbanStore.saveIssue(issue.id, s, content().trim(), p);
     }
@@ -110,10 +134,11 @@ const IssueModal: Component = () => {
               </label>
               <select
                 class="select select-bordered w-full"
+                aria-label="Column"
                 value={targetColumn()}
                 onChange={(e) => setTargetColumn(e.currentTarget.value as Column)}
               >
-                {COLUMNS.map((col) => (
+                {kanbanStore.visibleColumns.map((col) => (
                   <option value={col}>{COLUMN_LABELS[col]}</option>
                 ))}
               </select>

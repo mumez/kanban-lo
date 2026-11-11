@@ -18,7 +18,7 @@ Run `npx tsx src/cli.ts <subcommand> --help` for a subcommand's full option list
 
 | Command | Description |
 |---|---|
-| `list-issues [--status <column>] [--max <n>]` | List issues in a column, most-priority-first. Defaults: `todo`, `10`. |
+| `list-issues [--status <column>] [--max <n>]` | List issues in a column, most-priority-first. Defaults: `todo`, `10`. Statuses: `todo`, `working`, `reviewing`, `done`, `pending`. |
 | `fetch-issue --id <id>` | Print an issue's full content (subject/content/project/status) as JSON. |
 | `create-issue --subject <text> [--content <text>] [--project <name>] [--status <column>]` | Create a new issue. Defaults: empty content, no project, `todo`. |
 | `change-issue --id <id> [--status <column>] [--content <text>] [--append-content <text>]` | Change an issue's status and/or content. `--content`/`--append-content` are mutually exclusive. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`). |
@@ -26,6 +26,8 @@ Run `npx tsx src/cli.ts <subcommand> --help` for a subcommand's full option list
 | `unarchive-issue --id <id> [--status <column>]` | Restore an archived issue into a column. Default: `todo`. |
 | `list-archives` | List archived issues. |
 | `list-projects` | List the admin-maintained projects from `issues/_projects.json`. |
+
+The Web UI can hide a status with `issues/_settings.json` (`"hiddenStatuses": ["reviewing"]`). `kbl` does not read that file; every status above stays valid.
 
 ### Examples
 

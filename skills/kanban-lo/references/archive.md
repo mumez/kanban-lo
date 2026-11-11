@@ -4,7 +4,7 @@ Less-frequently-used commands for archiving issues out of the board and restorin
 this link from the main [SKILL.md](../SKILL.md) only when the user's request involves archiving,
 unarchiving, or listing archived issues.
 
-Archiving moves an issue's file to `_archive/`, outside the four kanban columns, so it no longer
+Archiving moves an issue's file to `_archive/`, outside the kanban columns, so it no longer
 shows up in `list-issues` for any column. Unarchiving moves it back into a column.
 
 ## Archive an issue — `archive-issue`
@@ -31,7 +31,7 @@ mise run unarchive-issue -- --id <id> [--status <column>]
 | Flag | Required | Default | Notes |
 |---|---|---|---|
 | `--id` | yes | — | |
-| `--status` | no | `todo` | one of `todo`, `working`, `done`, `pending`; column to restore into |
+| `--status` | no | `todo` | one of `todo`, `working`, `reviewing`, `done`, `pending`; column to restore into |
 
 Output: the restored issue's full content as JSON (subject, content, project, status). Exits
 non-zero with `Archived issue not found: <id>` on stderr if the id isn't currently archived.
