@@ -40,7 +40,8 @@ const Board: Component = () => {
           class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4"
           classList={{
             "xl:grid-cols-4": kanbanStore.visibleColumns.length <= 4,
-            "xl:grid-cols-5": kanbanStore.visibleColumns.length > 4,
+            "xl:grid-cols-5": kanbanStore.visibleColumns.length === 5,
+            "xl:grid-cols-6": kanbanStore.visibleColumns.length >= 6,
           }}
         >
           <For each={kanbanStore.visibleColumns}>

@@ -18,7 +18,7 @@ Run `npx tsx src/cli.ts <subcommand> --help` for a subcommand's full option list
 
 | Command | Description |
 |---|---|
-| `list-issues [--status <column>] [--max <n>]` | List issues in a column, most-priority-first. Defaults: `todo`, `10`. Statuses: `todo`, `working`, `reviewing`, `done`, `pending`. |
+| `list-issues [--status <column>] [--max <n>]` | List issues in a column, most-priority-first. Defaults: `todo`, `10`. Statuses: `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`. |
 | `fetch-issue --id <id>` | Print an issue's full content (subject/content/project/status) as JSON. |
 | `create-issue --subject <text> [--content <text>] [--project <name>] [--status <column>]` | Create a new issue. Defaults: empty content, no project, `todo`. |
 | `change-issue --id <id> [--status <column>] [--content <text>] [--append-content <text>]` | Change an issue's status and/or content. `--content`/`--append-content` are mutually exclusive. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`). |

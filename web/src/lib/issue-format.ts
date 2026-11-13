@@ -1,6 +1,6 @@
-// Kanban column definitions. `reviewing` sits between working and done.
-export type Column = "todo" | "working" | "reviewing" | "done" | "pending";
-export const COLUMNS: Column[] = ["todo", "working", "reviewing", "done", "pending"];
+// Kanban column definitions. `releasing` sits between reviewing and done.
+export type Column = "todo" | "working" | "reviewing" | "releasing" | "done" | "pending";
+export const COLUMNS: Column[] = ["todo", "working", "reviewing", "releasing", "done", "pending"];
 
 // ----------------------------------------------------------------
 // Board settings (issues/_settings.json)

@@ -6,7 +6,7 @@ description: Operate a Kanban-lo board (list, fetch, create, change, archive, an
 # kanban-lo
 
 Drives the `kbl` admin CLI for [Kanban-lo](https://github.com/mumez/kanban-lo) — a WebDAV-backed
-issue board with columns `todo`, `working`, `reviewing`, `done`, `pending`. `reviewing` may be hidden in the Web UI via `issues/_settings.json` (`hiddenStatuses`); `kbl` still accepts it.
+issue board with columns `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`. `releasing` sits between `reviewing` and `done` and is shown by default. Any column may be hidden in the Web UI via `issues/_settings.json` (`hiddenStatuses`); `kbl` still accepts every status.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ mise run list-issues -- --status <column> --max <n>
 
 | Flag | Required | Default | Notes |
 |---|---|---|---|
-| `--status` | no | `todo` | one of `todo`, `working`, `reviewing`, `done`, `pending` |
+| `--status` | no | `todo` | one of `todo`, `working`, `reviewing`, `releasing`, `done`, `pending` |
 | `--max` | no | `10` | max issues returned |
 
 If the user asks to list issues without naming a column, default `--status` to `todo`.
@@ -72,7 +72,7 @@ mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--app
 | Flag | Required | Notes |
 |---|---|---|
 | `--id` | yes | |
-| `--status` | no | one of `todo`, `working`, `reviewing`, `done`, `pending`; moves the issue to the top of the destination column |
+| `--status` | no | one of `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`; moves the issue to the top of the destination column |
 | `--content` | no | replaces the issue's content entirely |
 | `--append-content` | no | appends text to the existing content |
 
