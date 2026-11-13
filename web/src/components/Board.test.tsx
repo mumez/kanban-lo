@@ -52,6 +52,16 @@ describe("Board", () => {
     expect(container.querySelector(".grid")).toHaveClass("xl:grid-cols-5");
   });
 
+  it("hides releasing and keeps reviewing on five wide-screen tracks", async () => {
+    const { container } = await loadBoard(["releasing"]);
+
+    expect(screen.queryByRole("heading", { name: "Releasing" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reviewing" })).toBeInTheDocument();
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(5);
+    expect(container.querySelector(".grid")).toHaveClass("xl:grid-cols-5");
+  });
+
   it("uses four wide-screen tracks when only four columns stay visible", async () => {
     const { container } = await loadBoard(["reviewing", "releasing"]);
 
