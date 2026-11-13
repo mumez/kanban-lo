@@ -33,13 +33,19 @@ describe("parseSettings", () => {
 });
 
 describe("visibleColumns", () => {
-  it("lists reviewing between working and done when nothing is hidden", () => {
+  it("lists releasing between reviewing and done when nothing is hidden", () => {
     expect(visibleColumns([])).toEqual(COLUMNS);
-    expect(COLUMNS).toEqual(["todo", "working", "reviewing", "done", "pending"]);
+    expect(COLUMNS).toEqual(["todo", "working", "reviewing", "releasing", "done", "pending"]);
   });
 
   it("omits hidden statuses and keeps board order", () => {
-    expect(visibleColumns(["reviewing"])).toEqual(["todo", "working", "done", "pending"]);
+    expect(visibleColumns(["reviewing"])).toEqual([
+      "todo",
+      "working",
+      "releasing",
+      "done",
+      "pending",
+    ]);
   });
 
   it("ignores names that are not columns", () => {

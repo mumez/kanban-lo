@@ -21,16 +21,29 @@ describe("kanbanStore.visibleColumns", () => {
     vi.clearAllMocks();
   });
 
-  it("includes reviewing when settings hide nothing", async () => {
+  it("includes releasing between reviewing and done when settings hide nothing", async () => {
     await seed([]);
 
-    expect(kanbanStore.visibleColumns).toEqual(["todo", "working", "reviewing", "done", "pending"]);
+    expect(kanbanStore.visibleColumns).toEqual([
+      "todo",
+      "working",
+      "reviewing",
+      "releasing",
+      "done",
+      "pending",
+    ]);
   });
 
   it("omits statuses listed in hiddenStatuses without dropping their issues from the store", async () => {
     await seed([issue("a", "reviewing"), issue("b", "todo")], [], ["reviewing"]);
 
-    expect(kanbanStore.visibleColumns).toEqual(["todo", "working", "done", "pending"]);
+    expect(kanbanStore.visibleColumns).toEqual([
+      "todo",
+      "working",
+      "releasing",
+      "done",
+      "pending",
+    ]);
     expect(kanbanStore.issuesByColumn("reviewing").map((i) => i.id)).toEqual(["a"]);
   });
 
@@ -41,7 +54,7 @@ describe("kanbanStore.visibleColumns", () => {
   });
 
   it("uses todo when every column is hidden", async () => {
-    await seed([], [], ["todo", "working", "reviewing", "done", "pending"]);
+    await seed([], [], ["todo", "working", "reviewing", "releasing", "done", "pending"]);
 
     expect(kanbanStore.defaultCreateColumn).toBe("todo");
   });

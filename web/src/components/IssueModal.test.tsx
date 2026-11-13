@@ -160,11 +160,18 @@ describe("IssueModal", () => {
     expect(screen.getByRole("combobox", { name: "Project" })).toHaveValue("project-a");
   });
 
-  it("offers reviewing in the column dropdown when nothing is hidden", () => {
+  it("offers releasing between reviewing and done when nothing is hidden", () => {
     kanbanStore.openCreateModal("todo");
     render(() => <IssueModal />);
 
-    expect(screen.getByRole("option", { name: "Reviewing" })).toBeInTheDocument();
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Todo",
+      "Working",
+      "Reviewing",
+      "Releasing",
+      "Done",
+      "Pending",
+    ]);
   });
 
   it("creates in the first visible column when the selected one is hidden mid-form", async () => {

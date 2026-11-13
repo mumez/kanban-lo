@@ -8,6 +8,7 @@ export const COLUMN_LABELS: Record<Column, string> = {
   todo: "Todo",
   working: "Working",
   reviewing: "Reviewing",
+  releasing: "Releasing",
   done: "Done",
   pending: "Pending",
 };
@@ -17,6 +18,7 @@ export const COLUMN_COLORS: Record<Column, string> = {
   todo: "badge-neutral",
   working: "badge-info",
   reviewing: "badge-secondary",
+  releasing: "badge-accent",
   done: "badge-success",
   pending: "badge-warning",
 };
