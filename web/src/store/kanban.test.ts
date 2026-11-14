@@ -323,4 +323,39 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
     );
     expect(kanbanStore.issues.find((i) => i.id === "a")?.project).toBe("project-a");
   });
+
+  it("passes pr and sessionId through to dav.updateIssue", async () => {
+    await seed([issue("a", "todo")]);
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+
+    await kanbanStore.saveIssue("a", "a", "body", undefined, "https://github.com/org/repo/pull/2", "sess-2");
+
+    const saved = kanbanStore.issues.find((i) => i.id === "a");
+    expect(saved?.pr).toBe("https://github.com/org/repo/pull/2");
+    expect(saved?.sessionId).toBe("sess-2");
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.pr).toBe("https://github.com/org/repo/pull/2");
+    expect(written.sessionId).toBe("sess-2");
+  });
+
+  it("clears pr and sessionId when a save omits them", async () => {
+    await seed([
+      {
+        ...issue("a", "todo"),
+        pr: "https://github.com/org/repo/pull/2",
+        sessionId: "sess-2",
+      },
+    ]);
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+
+    await kanbanStore.saveIssue("a", "a", "", "project-a");
+
+    const saved = kanbanStore.issues.find((i) => i.id === "a");
+    expect(saved?.pr).toBeUndefined();
+    expect(saved?.sessionId).toBeUndefined();
+    expect(saved?.project).toBe("project-a");
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.pr).toBeUndefined();
+    expect(written.sessionId).toBeUndefined();
+  });
 });

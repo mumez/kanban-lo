@@ -8,6 +8,8 @@ const IssueModal: Component = () => {
   const [content, setContent] = createSignal("");
   const [targetColumn, setTargetColumn] = createSignal<Column>("todo");
   const [project, setProject] = createSignal("");
+  const [pr, setPr] = createSignal("");
+  const [sessionId, setSessionId] = createSignal("");
 
   /**
    * A column the form may target. A hidden choice snaps to the default
@@ -30,12 +32,16 @@ const IssueModal: Component = () => {
         setContent(kanbanStore.modal.issue.content);
         setTargetColumn(kanbanStore.modal.issue.status);
         setProject(kanbanStore.modal.issue.project ?? "");
+        setPr(kanbanStore.modal.issue.pr ?? "");
+        setSessionId(kanbanStore.modal.issue.sessionId ?? "");
       } else {
         setSubject("");
         setContent("");
         const requested = kanbanStore.modal.column;
         setTargetColumn(untrack(() => columnToShow(requested)));
         setProject(kanbanStore.selectedProject ?? "");
+        setPr("");
+        setSessionId("");
       }
     }
   });
@@ -64,7 +70,14 @@ const IssueModal: Component = () => {
       if (issue.status !== column) {
         await kanbanStore.moveIssue(issue.id, column);
       }
-      await kanbanStore.saveIssue(issue.id, s, content().trim(), p);
+      await kanbanStore.saveIssue(
+        issue.id,
+        s,
+        content().trim(),
+        p,
+        pr().trim() || undefined,
+        sessionId().trim() || undefined
+      );
     }
 
     kanbanStore.closeModal();
@@ -81,9 +94,12 @@ const IssueModal: Component = () => {
           if (e.target === e.currentTarget) kanbanStore.closeModal();
         }}
       >
-        <div class="modal-box w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <div
+          class="modal-box w-full max-w-lg flex flex-col !overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-4 shrink-0">
             <h3 class="font-bold text-lg">
               {isCreate() ? "New Issue" : "Edit Issue"}
             </h3>
@@ -95,84 +111,120 @@ const IssueModal: Component = () => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-            {/* Title */}
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-medium">Title <span class="text-error">*</span></span>
-              </label>
-              <input
-                type="text"
-                class="input input-bordered w-full"
-                placeholder="Enter issue title..."
-                value={subject()}
-                onInput={(e) => setSubject(e.currentTarget.value)}
-                autofocus
-                required
-              />
-            </div>
-
-            {/* Body */}
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-medium">Content</span>
-                <span class="label-text-alt text-base-content/50">Markdown</span>
-              </label>
-              <textarea
-                class="textarea textarea-bordered w-full font-mono text-sm"
-                rows={6}
-                placeholder="Enter details... (Markdown supported)"
-                value={content()}
-                onInput={(e) => setContent(e.currentTarget.value)}
-              />
-            </div>
-
-            {/* Column select */}
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-medium">Column</span>
-              </label>
-              <select
-                class="select select-bordered w-full"
-                aria-label="Column"
-                value={targetColumn()}
-                onChange={(e) => setTargetColumn(e.currentTarget.value as Column)}
-              >
-                {kanbanStore.visibleColumns.map((col) => (
-                  <option value={col}>{COLUMN_LABELS[col]}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Project select */}
-            <Show when={kanbanStore.projects.length > 0}>
+          <form onSubmit={handleSubmit} class="flex min-h-0 flex-1 flex-col gap-4">
+            <div class="flex min-h-0 flex-col gap-4 overflow-y-auto">
+              {/* Title */}
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium">Project</span>
+                  <span class="label-text font-medium">Title <span class="text-error">*</span></span>
+                </label>
+                <input
+                  type="text"
+                  class="input input-bordered w-full"
+                  placeholder="Enter issue title..."
+                  value={subject()}
+                  onInput={(e) => setSubject(e.currentTarget.value)}
+                  autofocus
+                  required
+                />
+              </div>
+
+              {/* Body */}
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-medium">Content</span>
+                  <span class="label-text-alt text-base-content/50">Markdown</span>
+                </label>
+                <textarea
+                  class="textarea textarea-bordered w-full font-mono text-sm"
+                  rows={5}
+                  placeholder="Enter details... (Markdown supported)"
+                  value={content()}
+                  onInput={(e) => setContent(e.currentTarget.value)}
+                />
+              </div>
+
+              {/* Column select */}
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-medium">Column</span>
                 </label>
                 <select
                   class="select select-bordered w-full"
-                  aria-label="Project"
-                  value={project()}
-                  onChange={(e) => setProject(e.currentTarget.value)}
+                  aria-label="Column"
+                  value={targetColumn()}
+                  onChange={(e) => setTargetColumn(e.currentTarget.value as Column)}
                 >
-                  <option value="">(none)</option>
-                  {kanbanStore.projects.map((p) => (
-                    <option value={p}>{p}</option>
+                  {kanbanStore.visibleColumns.map((col) => (
+                    <option value={col}>{COLUMN_LABELS[col]}</option>
                   ))}
                 </select>
               </div>
-            </Show>
 
-            {/* Error display */}
-            <Show when={kanbanStore.error}>
-              <div class="alert alert-error text-sm">
-                <span>{kanbanStore.error}</span>
-              </div>
-            </Show>
+              {/* Project select */}
+              <Show when={kanbanStore.projects.length > 0}>
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text font-medium">Project</span>
+                  </label>
+                  <select
+                    class="select select-bordered w-full"
+                    aria-label="Project"
+                    value={project()}
+                    onChange={(e) => setProject(e.currentTarget.value)}
+                  >
+                    <option value="">(none)</option>
+                    {kanbanStore.projects.map((p) => (
+                      <option value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              </Show>
 
-            {/* Action buttons */}
-            <div class="modal-action mt-2">
+              {/* Optional links, only once the issue exists */}
+              <Show when={!isCreate()}>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div class="form-control">
+                    <label class="label" for="issue-pr">
+                      <span class="label-text font-medium">PR URL</span>
+                    </label>
+                    <input
+                      id="issue-pr"
+                      type="text"
+                      class="input input-bordered w-full"
+                      placeholder="https://..."
+                      value={pr()}
+                      onInput={(e) => setPr(e.currentTarget.value)}
+                    />
+                  </div>
+
+                  <div class="form-control">
+                    <label class="label" for="issue-session-id">
+                      <span class="label-text font-medium">Session ID</span>
+                    </label>
+                    <input
+                      id="issue-session-id"
+                      type="text"
+                      class="input input-bordered w-full"
+                      placeholder="Agent session id"
+                      value={sessionId()}
+                      onInput={(e) => setSessionId(e.currentTarget.value)}
+                    />
+                  </div>
+                </div>
+              </Show>
+
+              {/* Error display */}
+              <Show when={kanbanStore.error}>
+                <div class="alert alert-error text-sm">
+                  <span>{kanbanStore.error}</span>
+                </div>
+              </Show>
+
+            </div>
+
+            {/* Action buttons stay in view while the fields scroll */}
+            <div class="modal-action mt-0 shrink-0">
               <button
                 type="button"
                 class="btn btn-ghost"

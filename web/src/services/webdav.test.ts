@@ -64,6 +64,35 @@ describe("parseMarkdown", () => {
       content: "Body",
     });
   });
+
+  it("extracts optional pr and sessionId from frontmatter", () => {
+    expect(
+      parseMarkdown(
+        "---\nproject: project-a\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Title\n\nBody"
+      )
+    ).toEqual({
+      subject: "Title",
+      content: "Body",
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/7",
+      sessionId: "sess-7",
+    });
+  });
+
+  it("keeps a pr URL that contains colons", () => {
+    expect(parseMarkdown("---\npr: https://example.com/org/repo/pull/1\n---\n# Title\n")).toEqual({
+      subject: "Title",
+      content: "",
+      pr: "https://example.com/org/repo/pull/1",
+    });
+  });
+
+  it("omits blank pr and sessionId values", () => {
+    expect(parseMarkdown("---\npr:\nsessionId:   \n---\n# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+    });
+  });
 });
 
 describe("serializeMarkdown", () => {
@@ -80,13 +109,32 @@ describe("serializeMarkdown", () => {
   });
 
   it("prefixes a YAML frontmatter block when a project is given", () => {
-    expect(serializeMarkdown("Title", "Body", "project-a")).toBe(
+    expect(serializeMarkdown("Title", "Body", { project: "project-a" })).toBe(
       "---\nproject: project-a\n---\n# Title\n\nBody\n"
     );
   });
 
   it("omits frontmatter when no project is given", () => {
     expect(serializeMarkdown("Title", "Body")).toBe("# Title\n\nBody\n");
+  });
+
+  it("writes pr and sessionId into frontmatter and skips blank values", () => {
+    expect(
+      serializeMarkdown("Title", "Body", {
+        project: "project-a",
+        pr: " https://github.com/org/repo/pull/7 ",
+        sessionId: "sess-7",
+      })
+    ).toBe(
+      "---\nproject: project-a\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Title\n\nBody\n"
+    );
+    expect(serializeMarkdown("Title", "", { pr: "  ", sessionId: "" })).toBe("# Title\n");
+  });
+
+  it("writes a frontmatter block when only sessionId is set", () => {
+    expect(serializeMarkdown("Title", "Body", { sessionId: "sess-1" })).toBe(
+      "---\nsessionId: sess-1\n---\n# Title\n\nBody\n"
+    );
   });
 });
 
@@ -141,6 +189,7 @@ function fakeClient() {
   return {
     getFileContents: vi.fn(),
     getDirectoryContents: vi.fn(),
+    putFileContents: vi.fn(),
   };
 }
 
@@ -257,5 +306,70 @@ describe("not-found handling", () => {
     const issues = await dav.listIssues("todo");
 
     expect(issues.map((i) => i.id)).toEqual(["kept"]);
+  });
+
+  it("reads optional pr and sessionId frontmatter onto the listed issue", async () => {
+    const dav = await loadWebdavService();
+    client.getDirectoryContents.mockResolvedValue([{ type: "file", basename: "1-with-pr.md" }]);
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/1-with-pr.md") {
+        return Promise.resolve(
+          "---\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Linked\n\nBody"
+        );
+      }
+      return Promise.reject(httpError(404));
+    });
+
+    expect(await dav.listIssues("todo")).toEqual([
+      {
+        id: "1-with-pr",
+        subject: "Linked",
+        content: "Body",
+        status: "todo",
+        pr: "https://github.com/org/repo/pull/7",
+        sessionId: "sess-7",
+      },
+    ]);
+  });
+});
+
+describe("updateIssue", () => {
+  it("writes pr and sessionId into frontmatter", async () => {
+    const dav = await loadWebdavService();
+    client.putFileContents.mockResolvedValue(undefined);
+
+    await dav.updateIssue({
+      id: "1",
+      subject: "Linked",
+      content: "Body",
+      status: "working",
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/7",
+      sessionId: "sess-7",
+    });
+
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/working/1.md",
+      "---\nproject: project-a\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Linked\n\nBody\n",
+      { overwrite: true }
+    );
+  });
+
+  it("omits frontmatter keys whose values are blank", async () => {
+    const dav = await loadWebdavService();
+    client.putFileContents.mockResolvedValue(undefined);
+
+    await dav.updateIssue({
+      id: "1",
+      subject: "Title",
+      content: "Body",
+      status: "todo",
+      pr: "  ",
+      sessionId: "",
+    });
+
+    expect(client.putFileContents).toHaveBeenCalledWith("/todo/1.md", "# Title\n\nBody\n", {
+      overwrite: true,
+    });
   });
 });

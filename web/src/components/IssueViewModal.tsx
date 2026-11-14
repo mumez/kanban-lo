@@ -25,7 +25,14 @@ const IssueViewModal: Component = () => {
     if (!issue) return;
 
     if (editing()) {
-      await kanbanStore.saveIssue(issue.id, issue.subject, editedContent(), issue.project);
+      await kanbanStore.saveIssue(
+        issue.id,
+        issue.subject,
+        editedContent(),
+        issue.project,
+        issue.pr,
+        issue.sessionId
+      );
       const updated = kanbanStore.issues.find((i) => i.id === issue.id);
       if (updated) kanbanStore.openViewModal(updated);
       setEditing(false);

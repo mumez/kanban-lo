@@ -216,6 +216,92 @@ describe("IssueModal", () => {
     expect(dav.moveIssue).not.toHaveBeenCalled();
   });
 
+  function follows(earlier: Element, later: Element) {
+    return (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  }
+
+  it("does not show PR URL or session id inputs when creating an issue", () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    expect(screen.queryByLabelText("PR URL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Session ID")).not.toBeInTheDocument();
+  });
+
+  it("shows PR URL and session id inputs below the other fields when editing", async () => {
+    vi.mocked(dav.loadProjects).mockResolvedValue(["project-a"]);
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "working",
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/12",
+      sessionId: "sess-42",
+    };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    const pr = screen.getByLabelText("PR URL");
+    const sessionId = screen.getByLabelText("Session ID");
+    expect(pr).toHaveValue("https://github.com/org/repo/pull/12");
+    expect(sessionId).toHaveValue("sess-42");
+    expect(follows(screen.getByRole("combobox", { name: "Project" }), pr)).toBe(true);
+    expect(follows(pr, sessionId)).toBe(true);
+    expect(follows(sessionId, screen.getByRole("button", { name: "Save" }))).toBe(true);
+  });
+
+  it("shows empty PR URL and session id inputs when the issue has neither", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    expect(screen.getByLabelText("PR URL")).toHaveValue("");
+    expect(screen.getByLabelText("Session ID")).toHaveValue("");
+  });
+
+  it("saves the PR URL and session id entered in the edit form", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByLabelText("PR URL"), {
+      target: { value: " https://github.com/org/repo/pull/9 " },
+    });
+    fireEvent.input(screen.getByLabelText("Session ID"), { target: { value: "sess-9" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.pr).toBe("https://github.com/org/repo/pull/9");
+    expect(written.sessionId).toBe("sess-9");
+    expect(dav.moveIssue).not.toHaveBeenCalled();
+  });
+
+  it("clears the PR URL and session id when those inputs are left blank", async () => {
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "working",
+      pr: "https://github.com/org/repo/pull/9",
+      sessionId: "sess-9",
+    };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByLabelText("PR URL"), { target: { value: "  " } });
+    fireEvent.input(screen.getByLabelText("Session ID"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.pr).toBeUndefined();
+    expect(written.sessionId).toBeUndefined();
+  });
+
   it("omits columns listed in hiddenStatuses from the column dropdown", async () => {
     vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["reviewing"] });
     await kanbanStore.reload();

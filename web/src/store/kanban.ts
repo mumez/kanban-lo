@@ -172,15 +172,30 @@ async function addIssue(column: Column, subject: string, content: string, projec
   });
 }
 
-/** Update an issue */
-async function saveIssue(id: string, subject: string, content: string, project?: string) {
+/**
+ * Update an issue's text and optional frontmatter. A missing `pr` or
+ * `sessionId` clears that field. Callers that only change the body (the view
+ * modal) must pass the current values through.
+ */
+async function saveIssue(
+  id: string,
+  subject: string,
+  content: string,
+  project?: string,
+  pr?: string,
+  sessionId?: string
+) {
   const idx = issues.findIndex((i) => i.id === id);
   if (idx === -1) return;
 
-  const updated: Issue = { ...issues[idx], subject, content, project };
+  const updated: Issue = { ...issues[idx], subject, content, project, pr, sessionId };
   await run(async () => {
     await dav.updateIssue(updated);
+    // A merged object drops keys whose value is undefined, so clear pr and
+    // sessionId with a path update, which deletes the property.
     setIssues(idx, { subject, content, project });
+    setIssues(idx, "pr", pr);
+    setIssues(idx, "sessionId", sessionId);
   });
 }
 
