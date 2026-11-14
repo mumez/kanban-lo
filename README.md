@@ -51,6 +51,19 @@ kanban-lo/
 Body (Markdown supported)
 ```
 
+An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those two from text inputs at the bottom of the form. Blank values are left out of the file.
+
+```markdown
+---
+project: project-a
+pr: https://github.com/org/repo/pull/1
+sessionId: agent-session-id
+---
+# Title
+
+Body (Markdown supported)
+```
+
 File names follow the `{timestamp}-{slug}.md` format.
 Moving a file between column directories changes its status.
 

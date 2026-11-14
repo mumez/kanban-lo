@@ -56,7 +56,7 @@ mise run fetch-issue -- --id <id>
 |---|---|
 | `--id` | yes |
 
-Output: the issue's full content as JSON (subject, content, project, status). Exits non-zero
+Output: the issue's full content as JSON (subject, content, project, status, and `pr` / `sessionId` when set). Exits non-zero
 with `Issue not found: <id>` on stderr if the id doesn't exist in any column.
 
 If it fails: `Issue not found` → don't guess or retry with a modified id; run `list-issues`

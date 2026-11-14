@@ -28,16 +28,18 @@ Content (Markdown)
 ```
 Filenames follow `{epoch-ms timestamp}-{slug}.md`, e.g. `1753600000000-example-issue.md`. The H1 is the subject; everything after it (minus leading blank lines) is the content.
 
-An issue may optionally be classified under a project via a leading YAML frontmatter block:
+An issue may optionally carry a leading YAML frontmatter block. `project` classifies it. `pr` is a pull request URL and `sessionId` is the id of the agent session assigned to the issue. All three are optional; a blank value is left out of the file. Keys are written in the order `project`, `pr`, `sessionId`.
 ```markdown
 ---
 project: project-a
+pr: https://github.com/org/repo/pull/1
+sessionId: agent-session-id
 ---
 # Subject
 
 Content (Markdown)
 ```
-An issue with no frontmatter has no project and is always shown, regardless of the selected filter. The list of valid projects lives in `issues/_projects.json` (a JSON array of strings), which is admin-maintained by hand — the Web UI only reads it, to populate the project filter dropdown, and never writes it.
+An issue with no `project` is always shown, regardless of the selected filter. The list of valid projects lives in `issues/_projects.json` (a JSON array of strings), which is admin-maintained by hand — the Web UI only reads it, to populate the project filter dropdown, and never writes it. The edit modal sets `pr` and `sessionId` from text inputs at the bottom of the form. The create modal does not show them. `kbl` preserves both when it rewrites an issue, and `fetch-issue` includes them in the JSON when they are set.
 
 Which columns the Web UI renders is controlled by `issues/_settings.json`, also admin-maintained and read-only in the UI. The shape is `{ "hiddenStatuses": ["reviewing"] }` — an array of column names to omit from the board and from the create/edit column dropdown. A missing file, a missing `hiddenStatuses` key, or an empty array shows every column (so `reviewing` and `releasing` are visible by default). Unknown names are ignored. The `kbl` CLI does not read this file; every column remains a valid `--status`.
 
@@ -45,7 +47,7 @@ Card order within a column is optional, per-column state kept in `issues/{column
 
 ## Architecture
 
-- `web/src/lib/issue-format.ts` — framework-agnostic issue logic with no Vite or WebDAV-client dependency: `Column`/`Issue` types, Markdown parse/serialize (`parseMarkdown`/`serializeMarkdown`, which also handle the optional `project` frontmatter), filename/slug generation (`generateId`), order sorting (`sortByOrder`/`ORDER_FILENAME`), and board-settings parsing (`parseSettings`/`visibleColumns`/`SETTINGS_FILENAME` for `issues/_settings.json`). Split out specifically so it can be imported by both `web/src/services/webdav.ts` and the standalone `scripts/kbl` CLI without pulling in Vite (`import.meta.env`) or SolidJS.
+- `web/src/lib/issue-format.ts` — framework-agnostic issue logic with no Vite or WebDAV-client dependency: `Column`/`Issue` types, Markdown parse/serialize (`parseMarkdown`/`serializeMarkdown`, which also handle the optional `project`, `pr`, and `sessionId` frontmatter), filename/slug generation (`generateId`), order sorting (`sortByOrder`/`ORDER_FILENAME`), and board-settings parsing (`parseSettings`/`visibleColumns`/`SETTINGS_FILENAME` for `issues/_settings.json`). Split out specifically so it can be imported by both `web/src/services/webdav.ts` and the standalone `scripts/kbl` CLI without pulling in Vite (`import.meta.env`) or SolidJS.
 - `web/src/lib/webdav-errors.ts` — `rethrowUnlessNotFound`, the `catch` policy both WebDAV layers share: a 404 on an optional file or directory (`_order.json`, `_projects.json`, `_settings.json`, a column/`_archive/` listing, a `getIssue` column probe) means "empty", any other error propagates. Per-file reads inside a listing are the exception — they skip the one bad file instead, so a single unreadable file can't fail a whole column. Kept out of `issue-format.ts` so that module stays free of WebDAV semantics.
 - `web/src/services/webdav.ts` — the only layer the web app uses to talk to WebDAV. Re-exports the pure logic from `lib/issue-format.ts` and owns the `_order.json` read/write (`loadOrder`/`saveOrder`), `loadSettings` (`issues/_settings.json`), and all CRUD + `moveFile` calls against the `webdav` client. Requests go to `/dav/*`. `listIssues` applies `sortByOrder` before returning. `loadAllIssues` lists every column in `COLUMNS`, including ones the UI may hide.
 - `web/src/store/kanban.ts` — single SolidJS store (`kanbanStore`) holding all app state: the issue list, the project list, the selected project filter, hidden statuses from `_settings.json`, loading/error flags, and modal state. All UI reads/mutates state through this store's exported actions (`addIssue`, `saveIssue`, `moveIssue`, `reorderIssue`, `removeIssue`, `init`, `reload`, `setSelectedProject`) rather than calling `webdav.ts` directly. `run()` wraps every async action to centralize loading/error handling. `reorderIssue(issueId, toColumn, toIndex)` is the one primitive for both same-column reordering and cross-column moves; it persists `_order.json` for every column it touches. `moveIssue` is a thin wrapper that calls it with an end-of-column index (used by the modal's column dropdown, where position doesn't matter). `issuesByColumn` always returns every issue in a column (unfiltered) since `reorderIssue` relies on it for the full per-column id list it writes to `_order.json`; `visibleIssuesByColumn` narrows that by the selected project filter and is what a rendered column lists. `visibleColumns` is `COLUMNS` minus `hiddenStatuses` and is what `Board` and the modal dropdown render.
