@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COLUMNS, parseSettings, visibleColumns } from "./issue-format";
+import { COLUMNS, frontmatterOf, parseSettings, visibleColumns } from "./issue-format";
 
 describe("parseSettings", () => {
   it("hides nothing when hiddenStatuses is missing", () => {
@@ -33,16 +33,40 @@ describe("parseSettings", () => {
 });
 
 describe("visibleColumns", () => {
-  it("lists reviewing between working and done when nothing is hidden", () => {
+  it("lists releasing between reviewing and done when nothing is hidden", () => {
     expect(visibleColumns([])).toEqual(COLUMNS);
-    expect(COLUMNS).toEqual(["todo", "working", "reviewing", "done", "pending"]);
+    expect(COLUMNS).toEqual(["todo", "working", "reviewing", "releasing", "done", "pending"]);
   });
 
   it("omits hidden statuses and keeps board order", () => {
-    expect(visibleColumns(["reviewing"])).toEqual(["todo", "working", "done", "pending"]);
+    expect(visibleColumns(["reviewing"])).toEqual([
+      "todo",
+      "working",
+      "releasing",
+      "done",
+      "pending",
+    ]);
   });
 
   it("ignores names that are not columns", () => {
     expect(visibleColumns(["nope"])).toEqual(COLUMNS);
+  });
+});
+
+describe("frontmatterOf", () => {
+  it("picks only project, pr, and sessionId from an issue", () => {
+    const issue = {
+      id: "abc",
+      subject: "Subject",
+      content: "body",
+      status: "todo" as const,
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/1",
+    };
+    expect(frontmatterOf(issue)).toEqual({
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/1",
+      sessionId: undefined,
+    });
   });
 });

@@ -1,12 +1,12 @@
 ---
 name: kanban-lo
-description: Operate a Kanban-lo board (list, fetch, create, change, archive, and unarchive issues, and look up admin-maintained projects) via the `kbl` CLI, run through `mise run` from $KBL_HOME. Use when the user asks to list/view/create/update/archive issues "on kanban", "on the kanban board", "on kanban-lo", or "with kbl", or needs to know which projects exist before filing a new issue.
+description: Operate a Kanban-lo board (list, fetch, create, change, archive, and unarchive issues; set an issue's project, PR URL, or session id; and look up admin-maintained projects) via the `kbl` CLI, run through `mise run` from $KBL_HOME. Use when the user asks to list/view/create/update/archive issues "on kanban", "on the kanban board", "on kanban-lo", or "with kbl", or needs to know which projects exist before filing a new issue.
 ---
 
 # kanban-lo
 
 Drives the `kbl` admin CLI for [Kanban-lo](https://github.com/mumez/kanban-lo) — a WebDAV-backed
-issue board with columns `todo`, `working`, `reviewing`, `done`, `pending`. `reviewing` may be hidden in the Web UI via `issues/_settings.json` (`hiddenStatuses`); `kbl` still accepts it.
+issue board with columns `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`. `releasing` sits between `reviewing` and `done` and is shown by default. Any column may be hidden in the Web UI via `issues/_settings.json` (`hiddenStatuses`); `kbl` still accepts every status.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ mise run list-issues -- --status <column> --max <n>
 
 | Flag | Required | Default | Notes |
 |---|---|---|---|
-| `--status` | no | `todo` | one of `todo`, `working`, `reviewing`, `done`, `pending` |
+| `--status` | no | `todo` | one of `todo`, `working`, `reviewing`, `releasing`, `done`, `pending` |
 | `--max` | no | `10` | max issues returned |
 
 If the user asks to list issues without naming a column, default `--status` to `todo`.
@@ -56,7 +56,7 @@ mise run fetch-issue -- --id <id>
 |---|---|
 | `--id` | yes |
 
-Output: the issue's full content as JSON (subject, content, project, status). Exits non-zero
+Output: the issue's full content as JSON (subject, content, project, status, and `pr` / `sessionId` when set). Exits non-zero
 with `Issue not found: <id>` on stderr if the id doesn't exist in any column.
 
 If it fails: `Issue not found` → don't guess or retry with a modified id; run `list-issues`
@@ -66,23 +66,48 @@ across the likely columns and ask the user to confirm the correct id.
 
 ```
 cd $KBL_HOME
-mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--append-content <text>]
+mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--append-content <text>] [--project <name>] [--pr <url>] [--session-id <id>]
 ```
 
 | Flag | Required | Notes |
 |---|---|---|
 | `--id` | yes | |
-| `--status` | no | one of `todo`, `working`, `reviewing`, `done`, `pending`; moves the issue to the top of the destination column |
+| `--status` | no | one of `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`; moves the issue to the top of the destination column |
 | `--content` | no | replaces the issue's content entirely |
-| `--append-content` | no | appends text to the existing content |
+| `--append-content` | no | appends text to the existing content, after a blank line (the CLI adds it — don't add your own) |
+| `--project` | no | replaces the issue's `project` frontmatter value |
+| `--pr` | no | replaces the issue's `pr` (pull request URL) frontmatter value |
+| `--session-id` | no | replaces the issue's `sessionId` (agent session id) frontmatter value |
 
-At least one of `--status`, `--content`, or `--append-content` is required — the CLI exits
-non-zero with `change-issue requires at least one of --status, --content, or --append-content`
-if none is given. `--content` and `--append-content` are also mutually exclusive, enforced by the
-CLI (`change-issue accepts only one of --content or --append-content`) — use one or the other
+Flags can be combined in one call (e.g. `--status reviewing --pr <url> --session-id ""`).
+At least one flag besides `--id` is required — the CLI exits non-zero with `change-issue
+requires at least one of --status, --content, --append-content, --project, --pr, or
+--session-id` if none is given.
+
+`--content` and `--append-content` are mutually exclusive, enforced by the CLI
+(`change-issue accepts only one of --content or --append-content`) — use one or the other
 depending on whether the user wants to replace or add to the issue body.
 
-🔴 **Checkpoint before `--content`**: this flag discards the issue's existing content entirely.
+**Frontmatter (`project`, `pr`, `sessionId`)**: an issue file may start with a YAML frontmatter
+block holding these three optional keys. Never edit that block through `--content` or
+`--append-content` — those only touch the body below the `# Subject` line. Use the dedicated
+flags instead:
+- `--project` / `--pr` / `--session-id <value>` sets or replaces that one key. Keys you don't
+  pass are kept as they are, and so are the subject and content.
+- Pass an empty string (`--pr ""`) to remove a key ("clear the PR", "unassign the session").
+- When setting a project name (not when clearing it with `--project ""`), resolve the name with `list-projects` first (see
+  [project name matching](#project-name-matching)). The CLI doesn't validate it.
+- No need to `fetch-issue` first, even when the user names the old value ("change project from
+  xxx to yyy") — just set the new value.
+- If one part of a request needs a question (e.g. no matching project), run the parts that
+  don't depend on the answer now, report them as done, and ask only about the rest.
+- In `fetch-issue` JSON, the real values are the top-level `project` / `pr` / `sessionId`
+  fields. YAML-looking text inside `content` is just body text.
+
+Output: the updated issue as JSON (same shape as `fetch-issue`); a removed key is absent.
+
+🔴 **Checkpoint before `--content`** — the only flag that needs confirmation; every other flag
+(including the frontmatter ones) runs directly. `--content` discards the issue's existing content entirely.
 Before running it, confirm with the user that a full replace (not an append) is what they want —
 if there's any ambiguity in the request, prefer `--append-content` or ask first.
 
@@ -103,8 +128,18 @@ No flags. Lists the admin-maintained projects from `issues/_projects.json`.
 Output: one project name per line. If empty: `No projects defined.`
 
 There's rarely a reason to call this on its own — its main use is checking which project names
-already exist before passing `--project` to `create-issue`, so the new issue lands under an
+already exist before passing `--project` to `create-issue` or `change-issue`, so the issue lands under an
 existing project instead of a name that only differs by typo or casing.
+
+#### Project name matching
+
+Used before passing `--project` to `create-issue` or `change-issue`. Compare the user's name
+with each line of `list-projects`, ignoring case and `-`, `_`, and spaces:
+- Exactly one match → use the existing name as listed, and tell the user if it differs from what
+  they typed (e.g. "used `kanban-lo` for KanbanLo").
+- No match or several matches → ask the user before writing. Offer the closest existing names,
+  or the new name as typed. A new name works, but it won't appear in the Web UI's project filter
+  until an admin adds it to `issues/_projects.json`.
 
 ### Create an issue — `create-issue`
 
@@ -120,10 +155,9 @@ mise run create-issue -- --subject <text> [--content <text>] [--project <name>] 
 | `--project` | no | unset |
 | `--status` | no | `todo` |
 
-If the user names a project for `--project` and you're not sure it matches an existing one
-exactly (casing, spelling), run `list-projects` first and use the existing name if there's a
-match — the CLI doesn't validate `--project` against the list, so a near-miss silently creates a
-new, separate project.
+If the user names a project for `--project`, resolve it per
+[project name matching](#project-name-matching) first — the CLI doesn't validate `--project`
+against the list, so a near-miss silently creates a new, separate project.
 
 If it fails: `--subject` omitted → CLI rejects the command; ask the user for a subject before
 retrying, don't invent a placeholder one.
@@ -144,6 +178,16 @@ read [references/archive.md](references/archive.md) for the full command details
 - "kanbanのexample-issueに作業内容を書いてworkingにしておいて" (write work notes on
   example-issue and set it to working)
   → `mise run change-issue -- --id "example-issue" --status working --append-content "..."`
+
+- "Set pr URL: https://github.com/org/repo/pull/12 to issue example-issue"
+  → `mise run change-issue -- --id "example-issue" --pr "https://github.com/org/repo/pull/12"`
+
+- "Change project of issue example-issue from ProjectA to ProjectB"
+  → `mise run list-projects` to confirm the exact name of ProjectB, then
+  `mise run change-issue -- --id "example-issue" --project "<confirmed name>"`
+
+- "example-issueのsessionIdを外して" (remove the session id from example-issue)
+  → `mise run change-issue -- --id "example-issue" --session-id ""`
 
 - "kanbanにあるexample-issueを参照して、仕様を確認して" (look at example-issue on kanban
   to check the spec)
@@ -172,10 +216,12 @@ stderr text.
   output or ask the user for it.
 - Don't pass both `--content` and `--append-content` to `change-issue` — the CLI rejects it; pick
   one based on whether the user wants to replace or add to the content.
+- Don't try to change `project`, `pr`, or `sessionId` by writing YAML into `--content` or
+  `--append-content` — use `--project`, `--pr`, or `--session-id`.
 - Don't run `change-issue --content` without confirming the user wants a full replace (see the
   checkpoint above) — it silently discards the existing content.
 - Don't invent a `--subject` for `create-issue` when the user didn't give one — ask instead.
-- Don't pass a `--project` name to `create-issue` on a guess when it could be a near-miss of an
+- Don't pass a `--project` name to `create-issue` or `change-issue` on a guess when it could be a near-miss of an
   existing one — run `list-projects` first; the CLI won't catch a typo'd or differently-cased
   duplicate for you.
 - Don't treat a non-zero exit as success or swallow the stderr text — always surface it to the

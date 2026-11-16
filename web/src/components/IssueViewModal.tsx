@@ -2,6 +2,7 @@ import { type Component, Show, createMemo, createSignal, createEffect } from "so
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { kanbanStore } from "../store/kanban";
+import { frontmatterOf } from "../lib/issue-format";
 
 const IssueViewModal: Component = () => {
   const [editing, setEditing] = createSignal(false);
@@ -25,7 +26,7 @@ const IssueViewModal: Component = () => {
     if (!issue) return;
 
     if (editing()) {
-      await kanbanStore.saveIssue(issue.id, issue.subject, editedContent(), issue.project);
+      await kanbanStore.saveIssue(issue.id, issue.subject, editedContent(), frontmatterOf(issue));
       const updated = kanbanStore.issues.find((i) => i.id === issue.id);
       if (updated) kanbanStore.openViewModal(updated);
       setEditing(false);

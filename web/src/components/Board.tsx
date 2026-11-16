@@ -10,6 +10,26 @@ import type { Column } from "../types";
 import { kanbanStore } from "../store/kanban";
 import KanbanColumn from "./KanbanColumn";
 
+/**
+ * Wide-screen tracks, keyed by how many columns are shown. A count below the
+ * smallest key uses that key; a count above the largest uses that key. The
+ * next column is one new entry here.
+ */
+const WIDE_SCREEN_TRACK_CLASS: Record<number, string> = {
+  4: "xl:grid-cols-4",
+  5: "xl:grid-cols-5",
+  6: "xl:grid-cols-6",
+};
+
+const WIDE_SCREEN_TRACK_COUNTS = Object.keys(WIDE_SCREEN_TRACK_CLASS).map(Number);
+const MIN_WIDE_SCREEN_TRACKS = Math.min(...WIDE_SCREEN_TRACK_COUNTS);
+
+function wideScreenTrackClass(columnCount: number): string {
+  const fitting = WIDE_SCREEN_TRACK_COUNTS.filter((count) => count <= columnCount);
+  const tracks = fitting.length > 0 ? Math.max(...fitting) : MIN_WIDE_SCREEN_TRACKS;
+  return WIDE_SCREEN_TRACK_CLASS[tracks];
+}
+
 /** Which column an id belongs to: a column droppable (empty-area drop) or a card's column */
 function columnOf(id: string | number): Column | undefined {
   const columns = kanbanStore.visibleColumns;
@@ -37,11 +57,7 @@ const Board: Component = () => {
     <DragDropProvider onDragEnd={handleDragEnd} collisionDetector={closestCenter}>
       <DragDropSensors>
         <div
-          class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4"
-          classList={{
-            "xl:grid-cols-4": kanbanStore.visibleColumns.length <= 4,
-            "xl:grid-cols-5": kanbanStore.visibleColumns.length > 4,
-          }}
+          class={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 ${wideScreenTrackClass(kanbanStore.visibleColumns.length)}`}
         >
           <For each={kanbanStore.visibleColumns}>
             {(column) => <KanbanColumn column={column} />}

@@ -5,7 +5,7 @@ A simple kanban board for local environments.
 
 ## Features
 
-- **File-based** — `.md` files under `issues/{todo,working,reviewing,done,pending}/` are the issues themselves
+- **File-based** — `.md` files under `issues/{todo,working,reviewing,releasing,done,pending}/` are the issues themselves
 - **Minimal dependencies** — runs with just Docker (Caddy) and Node.js
 - **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop to reorder and move between columns, create/edit/delete via modal
 - **WebDAV** — the SPA reads and writes files over WebDAV. Issues can also be managed by manipulating files directly, without the UI
@@ -19,6 +19,7 @@ kanban-lo/
 │   ├── todo/          # Not started
 │   ├── working/       # In progress
 │   ├── reviewing/     # In review
+│   ├── releasing/     # Releasing
 │   ├── done/          # Done
 │   └── pending/       # Pending
 ├── _templates/
@@ -50,10 +51,23 @@ kanban-lo/
 Body (Markdown supported)
 ```
 
+An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those two from text inputs at the bottom of the form. Blank values are left out of the file.
+
+```markdown
+---
+project: project-a
+pr: https://github.com/org/repo/pull/1
+sessionId: agent-session-id
+---
+# Title
+
+Body (Markdown supported)
+```
+
 File names follow the `{timestamp}-{slug}.md` format.
 Moving a file between column directories changes its status.
 
-`reviewing` is a real status, shown on the board by default. To hide it (or any other status) from the Web UI only, add `issues/_settings.json`:
+`reviewing` and `releasing` are real statuses, shown on the board by default. `releasing` sits between `reviewing` and `done`. To hide either of them (or any other status) from the Web UI only, add `issues/_settings.json`:
 
 ```json
 { "hiddenStatuses": ["reviewing"] }

@@ -50,7 +50,7 @@ dir = "scripts"
 run = "npx tsx src/cli.ts fetch-issue"
 
 [tasks.change-issue]
-description = "kbl change-issue -- change an issue's status/content (e.g. mise run change-issue -- --id <id> --status done)"
+description = "kbl change-issue -- change an issue's status/content/frontmatter (e.g. mise run change-issue -- --id <id> --status done)"
 dir = "scripts"
 run = "npx tsx src/cli.ts change-issue"
 

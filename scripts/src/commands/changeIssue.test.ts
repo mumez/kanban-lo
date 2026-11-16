@@ -12,9 +12,9 @@ beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
 
-it("throws when neither --status nor --content is given", async () => {
+it("throws when nothing to change is given", async () => {
   await expect(changeIssue({ id: "abc" })).rejects.toThrow(
-    "change-issue requires at least one of --status, --content, or --append-content"
+    "change-issue requires at least one of --status, --content, --append-content, --project, --pr, or --session-id"
   );
   expect(dav.getIssue).not.toHaveBeenCalled();
 });
@@ -29,11 +29,11 @@ it("throws when the issue doesn't exist", async () => {
 
 it("updates content only", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
-  vi.mocked(dav.updateIssueContent).mockResolvedValue({ ...baseIssue, content: "new" });
+  vi.mocked(dav.updateIssue).mockResolvedValue({ ...baseIssue, content: "new" });
 
   await changeIssue({ id: "abc", content: "new" });
 
-  expect(dav.updateIssueContent).toHaveBeenCalledWith(baseIssue, "new");
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { content: "new" });
   expect(dav.changeIssueStatus).not.toHaveBeenCalled();
 });
 
@@ -43,7 +43,7 @@ it("changes status only", async () => {
 
   await changeIssue({ id: "abc", status: "done" });
 
-  expect(dav.updateIssueContent).not.toHaveBeenCalled();
+  expect(dav.updateIssue).not.toHaveBeenCalled();
   expect(dav.changeIssueStatus).toHaveBeenCalledWith(baseIssue, "done");
 });
 
@@ -56,32 +56,64 @@ it("throws when both --content and --append-content are given", async () => {
 
 it("appends content to the existing content", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
-  vi.mocked(dav.updateIssueContent).mockResolvedValue({ ...baseIssue, content: "old\n\nmore" });
+  vi.mocked(dav.updateIssue).mockResolvedValue({ ...baseIssue, content: "old\n\nmore" });
 
   await changeIssue({ id: "abc", appendContent: "more" });
 
-  expect(dav.updateIssueContent).toHaveBeenCalledWith(baseIssue, "old\n\nmore");
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { content: "old\n\nmore" });
   expect(dav.changeIssueStatus).not.toHaveBeenCalled();
 });
 
 it("uses append content as-is when the existing content is empty", async () => {
   const emptyContentIssue = { ...baseIssue, content: "" };
   vi.mocked(dav.getIssue).mockResolvedValue(emptyContentIssue);
-  vi.mocked(dav.updateIssueContent).mockResolvedValue({ ...emptyContentIssue, content: "more" });
+  vi.mocked(dav.updateIssue).mockResolvedValue({ ...emptyContentIssue, content: "more" });
 
   await changeIssue({ id: "abc", appendContent: "more" });
 
-  expect(dav.updateIssueContent).toHaveBeenCalledWith(emptyContentIssue, "more");
+  expect(dav.updateIssue).toHaveBeenCalledWith(emptyContentIssue, { content: "more" });
 });
 
 it("updates content before changing status when both are given", async () => {
   vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
   const withNewContent = { ...baseIssue, content: "new" };
-  vi.mocked(dav.updateIssueContent).mockResolvedValue(withNewContent);
+  vi.mocked(dav.updateIssue).mockResolvedValue(withNewContent);
   vi.mocked(dav.changeIssueStatus).mockResolvedValue({ ...withNewContent, status: "done" });
 
   await changeIssue({ id: "abc", content: "new", status: "done" });
 
-  expect(dav.updateIssueContent).toHaveBeenCalledWith(baseIssue, "new");
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { content: "new" });
   expect(dav.changeIssueStatus).toHaveBeenCalledWith(withNewContent, "done");
+});
+
+it("replaces frontmatter values without touching content", async () => {
+  vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
+  vi.mocked(dav.updateIssue).mockResolvedValue({ ...baseIssue, pr: "https://github.com/org/repo/pull/1" });
+
+  await changeIssue({ id: "abc", pr: "https://github.com/org/repo/pull/1", project: "project-b" });
+
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, {
+    pr: "https://github.com/org/repo/pull/1",
+    project: "project-b",
+  });
+  expect(dav.changeIssueStatus).not.toHaveBeenCalled();
+});
+
+it("passes an empty frontmatter value through so it gets removed", async () => {
+  vi.mocked(dav.getIssue).mockResolvedValue({ ...baseIssue, sessionId: "sess-1" });
+  vi.mocked(dav.updateIssue).mockResolvedValue(baseIssue);
+
+  await changeIssue({ id: "abc", sessionId: "" });
+
+  expect(dav.updateIssue).toHaveBeenCalledWith({ ...baseIssue, sessionId: "sess-1" }, { sessionId: "" });
+});
+
+it("writes content and frontmatter in one update", async () => {
+  vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
+  vi.mocked(dav.updateIssue).mockResolvedValue(baseIssue);
+
+  await changeIssue({ id: "abc", appendContent: "more", sessionId: "sess-2" });
+
+  expect(dav.updateIssue).toHaveBeenCalledTimes(1);
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { content: "old\n\nmore", sessionId: "sess-2" });
 });
