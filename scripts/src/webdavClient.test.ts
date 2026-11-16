@@ -210,13 +210,13 @@ describe("createIssue", () => {
   });
 });
 
-describe("updateIssueContent", () => {
+describe("updateIssue", () => {
   it("overwrites the file with the new content, preserving subject and project", async () => {
     const dav = await loadWebdavClient();
     client.putFileContents.mockResolvedValue(undefined);
 
     const issue = { id: "abc", subject: "Subject", content: "old", status: "todo" as const, project: "project-a" };
-    const updated = await dav.updateIssueContent(issue, "new content");
+    const updated = await dav.updateIssue(issue, { content: "new content" });
 
     expect(updated.content).toBe("new content");
     expect(client.putFileContents).toHaveBeenCalledWith(
@@ -238,11 +238,26 @@ describe("updateIssueContent", () => {
       pr: "https://github.com/org/repo/pull/4",
       sessionId: "sess-4",
     };
-    await dav.updateIssueContent(issue, "new content");
+    await dav.updateIssue(issue, { content: "new content" });
 
     expect(client.putFileContents).toHaveBeenCalledWith(
       "/todo/abc.md",
       "---\npr: https://github.com/org/repo/pull/4\nsessionId: sess-4\n---\n# Subject\n\nnew content\n",
+      { overwrite: true }
+    );
+  });
+
+  it("replaces and removes frontmatter values, keeping the content", async () => {
+    const dav = await loadWebdavClient();
+    client.putFileContents.mockResolvedValue(undefined);
+
+    const issue = { id: "abc", subject: "Subject", content: "body", status: "todo" as const, project: "project-a", sessionId: "sess-1" };
+    const updated = await dav.updateIssue(issue, { project: "project-b", pr: "https://github.com/org/repo/pull/5", sessionId: "" });
+
+    expect(updated.project).toBe("project-b");
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/todo/abc.md",
+      "---\nproject: project-b\npr: https://github.com/org/repo/pull/5\n---\n# Subject\n\nbody\n",
       { overwrite: true }
     );
   });

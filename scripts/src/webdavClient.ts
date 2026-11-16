@@ -190,10 +190,16 @@ export async function createIssue(
     : { id, subject, content, status: column };
 }
 
-/** Update an issue's content (overwrite file in the same column) */
-export async function updateIssueContent(issue: Issue, content: string): Promise<Issue> {
+/**
+ * Update an issue's content and/or frontmatter (overwrite file in the same column).
+ * A blank frontmatter value removes that key from the file.
+ */
+export async function updateIssue(
+  issue: Issue,
+  changes: Partial<Pick<Issue, "content" | "project" | "pr" | "sessionId">>
+): Promise<Issue> {
   const client = getClient();
-  const updated: Issue = { ...issue, content };
+  const updated: Issue = { ...issue, ...changes };
   const path = davPath(issue.status, issue.id);
   const text = serializeMarkdown(updated.subject, updated.content, {
     project: updated.project,

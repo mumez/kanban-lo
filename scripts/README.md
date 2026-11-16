@@ -21,7 +21,7 @@ Run `npx tsx src/cli.ts <subcommand> --help` for a subcommand's full option list
 | `list-issues [--status <column>] [--max <n>]` | List issues in a column, most-priority-first. Defaults: `todo`, `10`. Statuses: `todo`, `working`, `reviewing`, `releasing`, `done`, `pending`. |
 | `fetch-issue --id <id>` | Print an issue's full content (subject/content/project/status, plus `pr` and `sessionId` when set) as JSON. |
 | `create-issue --subject <text> [--content <text>] [--project <name>] [--status <column>]` | Create a new issue. Defaults: empty content, no project, `todo`. |
-| `change-issue --id <id> [--status <column>] [--content <text>] [--append-content <text>]` | Change an issue's status and/or content. `--content`/`--append-content` are mutually exclusive. Rewriting content keeps `pr` and `sessionId`. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`). |
+| `change-issue --id <id> [--status <column>] [--content <text>] [--append-content <text>] [--project <name>] [--pr <url>] [--session-id <id>]` | Change an issue's status, content, and/or frontmatter. `--content`/`--append-content` are mutually exclusive. `--project`/`--pr`/`--session-id` replace that frontmatter value; pass `""` to remove it. Frontmatter values not given are kept. A `--status` change moves the issue to the top of the destination column's order (`issues/{column}/_order.json`). |
 | `archive-issue --id <id>` | Archive an issue: move its file to `issues/_archive/`, out of its column. Archived issues aren't visible on the board. |
 | `unarchive-issue --id <id> [--status <column>]` | Restore an archived issue into a column. Default: `todo`. |
 | `list-archives` | List archived issues. |
@@ -37,6 +37,7 @@ npx tsx src/cli.ts fetch-issue --id "1753600000000-example-issue"
 npx tsx src/cli.ts create-issue --project project-a --subject "New subject" --content "New content"
 npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --status done --append-content "Append content"
 npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --content "New content"
+npx tsx src/cli.ts change-issue --id "1753600000000-example-issue" --pr "https://github.com/org/repo/pull/1" --session-id ""
 npx tsx src/cli.ts archive-issue --id "1753600000000-example-issue"
 npx tsx src/cli.ts unarchive-issue --id "1753600000000-example-issue" --status todo
 npx tsx src/cli.ts list-archives

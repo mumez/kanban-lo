@@ -39,7 +39,7 @@ sessionId: agent-session-id
 
 Content (Markdown)
 ```
-An issue with no `project` is always shown, regardless of the selected filter. The list of valid projects lives in `issues/_projects.json` (a JSON array of strings), which is admin-maintained by hand — the Web UI only reads it, to populate the project filter dropdown, and never writes it. The edit modal sets `pr` and `sessionId` from text inputs at the bottom of the form. The create modal does not show them. `kbl` preserves both when it rewrites an issue, and `fetch-issue` includes them in the JSON when they are set.
+An issue with no `project` is always shown, regardless of the selected filter. The list of valid projects lives in `issues/_projects.json` (a JSON array of strings), which is admin-maintained by hand — the Web UI only reads it, to populate the project filter dropdown, and never writes it. The edit modal sets `pr` and `sessionId` from text inputs at the bottom of the form. The create modal does not show them. `kbl change-issue` can replace or remove (`""`) `project`, `pr`, and `sessionId`, and preserves any it isn't given, and `fetch-issue` includes them in the JSON when they are set.
 
 Which columns the Web UI renders is controlled by `issues/_settings.json`, also admin-maintained and read-only in the UI. The shape is `{ "hiddenStatuses": ["reviewing"] }` — an array of column names to omit from the board and from the create/edit column dropdown. A missing file, a missing `hiddenStatuses` key, or an empty array shows every column (so `reviewing` and `releasing` are visible by default). Unknown names are ignored. The `kbl` CLI does not read this file; every column remains a valid `--status`.
 
@@ -92,4 +92,4 @@ npm run typecheck          # tsc --noEmit
 npm run test               # Vitest unit tests
 ```
 
-Subcommands: `list-issues [--status <column>] [--max N]` (defaults: `todo`, `10`), `fetch-issue --id <id>`, `change-issue --id <id> [--status <column>] [--content <text>]`, `create-issue --subject <text> [--project <name>] [--content <text>] [--status <column>]`, `list-projects`. Unit tests mock `webdavClient.ts` (command tests) or the `webdav` npm package's `createClient` (`webdavClient.test.ts` itself), mirroring how `web/`'s tests mock `services/webdav.ts`.
+Subcommands: `list-issues [--status <column>] [--max N]` (defaults: `todo`, `10`), `fetch-issue --id <id>`, `change-issue --id <id> [--status <column>] [--content <text>] [--append-content <text>] [--project <name>] [--pr <url>] [--session-id <id>]`, `create-issue --subject <text> [--project <name>] [--content <text>] [--status <column>]`, `list-projects`. Unit tests mock `webdavClient.ts` (command tests) or the `webdav` npm package's `createClient` (`webdavClient.test.ts` itself), mirroring how `web/`'s tests mock `services/webdav.ts`.
