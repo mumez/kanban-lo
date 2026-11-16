@@ -6,6 +6,7 @@ import {
   COLUMNS,
   parseMarkdown,
   serializeMarkdown,
+  frontmatterOf,
   generateId,
   sortByOrder,
   parseSettings,
@@ -159,11 +160,7 @@ export async function createIssue(
 export async function updateIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.status, issue.id);
-  const text = serializeMarkdown(issue.subject, issue.content, {
-    project: issue.project,
-    pr: issue.pr,
-    sessionId: issue.sessionId,
-  });
+  const text = serializeMarkdown(issue.subject, issue.content, frontmatterOf(issue));
   await client.putFileContents(path, text, { overwrite: true });
 }
 

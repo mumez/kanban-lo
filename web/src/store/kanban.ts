@@ -190,11 +190,9 @@ async function saveIssue(
   const updated: Issue = { ...issues[idx], subject, content, project, pr, sessionId };
   await run(async () => {
     await dav.updateIssue(updated);
-    // A merged object drops keys whose value is undefined, so clear pr and
-    // sessionId with a path update, which deletes the property.
-    setIssues(idx, { subject, content, project });
-    setIssues(idx, "pr", pr);
-    setIssues(idx, "sessionId", sessionId);
+    // Merging an undefined value deletes that key from the store, so a save
+    // that omits pr or sessionId clears it.
+    setIssues(idx, { subject, content, project, pr, sessionId });
   });
 }
 

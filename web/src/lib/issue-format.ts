@@ -55,6 +55,11 @@ export interface IssueFrontmatter {
   sessionId?: string;
 }
 
+/** Pick just the frontmatter fields from an issue, e.g. to pass to serializeMarkdown. */
+export function frontmatterOf(issue: IssueFrontmatter): IssueFrontmatter {
+  return { project: issue.project, pr: issue.pr, sessionId: issue.sessionId };
+}
+
 // Issue type
 export interface Issue extends IssueFrontmatter {
   /** Filename without extension, e.g. "1735000000000-fix-login-bug" */

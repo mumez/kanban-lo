@@ -5,6 +5,7 @@ import {
   COLUMNS,
   parseMarkdown,
   serializeMarkdown,
+  frontmatterOf,
   generateId,
   sortByOrder,
   ORDER_FILENAME,
@@ -201,11 +202,7 @@ export async function updateIssue(
   const client = getClient();
   const updated: Issue = { ...issue, ...changes };
   const path = davPath(issue.status, issue.id);
-  const text = serializeMarkdown(updated.subject, updated.content, {
-    project: updated.project,
-    pr: updated.pr,
-    sessionId: updated.sessionId,
-  });
+  const text = serializeMarkdown(updated.subject, updated.content, frontmatterOf(updated));
   await client.putFileContents(path, text, { overwrite: true });
   return updated;
 }
