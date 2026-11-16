@@ -316,7 +316,7 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
     await seed([issue("a", "todo")]);
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
 
-    await kanbanStore.saveIssue("a", "a", "", "project-a");
+    await kanbanStore.saveIssue("a", "a", "", { project: "project-a" });
 
     expect(dav.updateIssue).toHaveBeenCalledWith(
       expect.objectContaining({ id: "a", project: "project-a" })
@@ -328,7 +328,10 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
     await seed([issue("a", "todo")]);
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
 
-    await kanbanStore.saveIssue("a", "a", "body", undefined, "https://github.com/org/repo/pull/2", "sess-2");
+    await kanbanStore.saveIssue("a", "a", "body", {
+      pr: "https://github.com/org/repo/pull/2",
+      sessionId: "sess-2",
+    });
 
     const saved = kanbanStore.issues.find((i) => i.id === "a");
     expect(saved?.pr).toBe("https://github.com/org/repo/pull/2");
@@ -348,7 +351,7 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
     ]);
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
 
-    await kanbanStore.saveIssue("a", "a", "", "project-a");
+    await kanbanStore.saveIssue("a", "a", "", { project: "project-a" });
 
     const saved = kanbanStore.issues.find((i) => i.id === "a");
     expect(saved?.pr).toBeUndefined();

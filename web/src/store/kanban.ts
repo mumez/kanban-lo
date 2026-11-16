@@ -2,7 +2,7 @@ import { createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
 import { COLUMNS } from "../types";
-import { visibleColumns as columnsExceptHidden } from "../lib/issue-format";
+import { visibleColumns as columnsExceptHidden, type IssueFrontmatter } from "../lib/issue-format";
 import * as dav from "../services/webdav";
 
 // ----------------------------------------------------------------
@@ -173,21 +173,20 @@ async function addIssue(column: Column, subject: string, content: string, projec
 }
 
 /**
- * Update an issue's text and optional frontmatter. A missing `pr` or
- * `sessionId` clears that field. Callers that only change the body (the view
- * modal) must pass the current values through.
+ * Update an issue's text and optional frontmatter. A frontmatter field that
+ * is omitted is cleared. Callers that only change the body (the view modal)
+ * must pass the current values through.
  */
 async function saveIssue(
   id: string,
   subject: string,
   content: string,
-  project?: string,
-  pr?: string,
-  sessionId?: string
+  frontmatter: IssueFrontmatter = {}
 ) {
   const idx = issues.findIndex((i) => i.id === id);
   if (idx === -1) return;
 
+  const { project, pr, sessionId } = frontmatter;
   const updated: Issue = { ...issues[idx], subject, content, project, pr, sessionId };
   await run(async () => {
     await dav.updateIssue(updated);

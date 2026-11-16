@@ -70,14 +70,11 @@ const IssueModal: Component = () => {
       if (issue.status !== column) {
         await kanbanStore.moveIssue(issue.id, column);
       }
-      await kanbanStore.saveIssue(
-        issue.id,
-        s,
-        content().trim(),
-        p,
-        pr().trim() || undefined,
-        sessionId().trim() || undefined
-      );
+      await kanbanStore.saveIssue(issue.id, s, content().trim(), {
+        project: p,
+        pr: pr().trim() || undefined,
+        sessionId: sessionId().trim() || undefined,
+      });
     }
 
     kanbanStore.closeModal();
