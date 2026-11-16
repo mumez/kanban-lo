@@ -138,8 +138,7 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
-        const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, status: column, project };
+        return { id, status: column, ...parseMarkdown(text) };
       } catch {
         // Skip just this file (removed mid-listing, unreadable, transient
         // failure) rather than failing the whole listing.
@@ -161,8 +160,7 @@ export async function getIssue(id: string): Promise<Issue | null> {
         const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
-        const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, status: column, project } as Issue;
+        return { id, status: column, ...parseMarkdown(text) };
       } catch (err) {
         rethrowUnlessNotFound(err);
         return null;
@@ -182,7 +180,7 @@ export async function createIssue(
   const client = getClient();
   const id = generateId(subject);
   const path = davPath(column, id);
-  const text = serializeMarkdown(subject, content, project);
+  const text = serializeMarkdown(subject, content, { project });
 
   await client.putFileContents(path, text, { overwrite: false });
   await addToOrder(column, id);
@@ -197,7 +195,11 @@ export async function updateIssueContent(issue: Issue, content: string): Promise
   const client = getClient();
   const updated: Issue = { ...issue, content };
   const path = davPath(issue.status, issue.id);
-  const text = serializeMarkdown(updated.subject, updated.content, updated.project);
+  const text = serializeMarkdown(updated.subject, updated.content, {
+    project: updated.project,
+    pr: updated.pr,
+    sessionId: updated.sessionId,
+  });
   await client.putFileContents(path, text, { overwrite: true });
   return updated;
 }
@@ -235,6 +237,8 @@ export interface ArchivedIssue {
   subject: string;
   content: string;
   project?: string;
+  pr?: string;
+  sessionId?: string;
 }
 
 /** Archive an issue: move its file to _archive/, out of its current column. */
@@ -248,14 +252,12 @@ export async function archiveIssue(issue: Issue): Promise<void> {
 export async function unarchiveIssue(id: string, toColumn: Column): Promise<Issue> {
   const client = getClient();
   const text = (await client.getFileContents(archivePath(id), { format: "text" })) as string;
-  const { subject, content, project } = parseMarkdown(text);
+  const parsed = parseMarkdown(text);
 
   await client.moveFile(archivePath(id), davPath(toColumn, id));
   await addToOrder(toColumn, id);
 
-  return project
-    ? { id, subject, content, status: toColumn, project }
-    : { id, subject, content, status: toColumn };
+  return { id, status: toColumn, ...parsed };
 }
 
 /** List all issues sitting in _archive/. */
@@ -280,8 +282,7 @@ export async function listArchivedIssues(): Promise<ArchivedIssue[]> {
         const text = (await client.getFileContents(archivePath(id), {
           format: "text",
         })) as string;
-        const { subject, content, project } = parseMarkdown(text);
-        return project ? { id, subject, content, project } : { id, subject, content };
+        return { id, ...parseMarkdown(text) };
       } catch {
         // Skip just this file (removed mid-listing, unreadable, transient
         // failure) rather than failing the whole listing.

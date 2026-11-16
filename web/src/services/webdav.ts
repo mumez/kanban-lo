@@ -122,8 +122,7 @@ export async function listIssues(column: Column): Promise<Issue[]> {
         const text = (await client.getFileContents(davPath(column, id), {
           format: "text",
         })) as string;
-        const { subject, content, project } = parseMarkdown(text);
-        return { id, subject, content, status: column, project };
+        return { id, status: column, ...parseMarkdown(text) };
       } catch {
         // Skip just this file (removed mid-listing, unreadable, transient
         // failure) rather than failing the whole listing.
@@ -146,7 +145,7 @@ export async function createIssue(
   const client = getClient();
   const id = generateId(subject);
   const path = davPath(column, id);
-  const text = serializeMarkdown(subject, content, project);
+  const text = serializeMarkdown(subject, content, { project });
 
   await client.putFileContents(path, text, { overwrite: false });
   await addToOrder(column, id);
@@ -160,7 +159,11 @@ export async function createIssue(
 export async function updateIssue(issue: Issue): Promise<void> {
   const client = getClient();
   const path = davPath(issue.status, issue.id);
-  const text = serializeMarkdown(issue.subject, issue.content, issue.project);
+  const text = serializeMarkdown(issue.subject, issue.content, {
+    project: issue.project,
+    pr: issue.pr,
+    sessionId: issue.sessionId,
+  });
   await client.putFileContents(path, text, { overwrite: true });
 }
 

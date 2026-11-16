@@ -112,6 +112,28 @@ describe("getIssue", () => {
     expect(issue).toEqual({ id: "abc", subject: "Subject", content: "Body", status: "working" });
   });
 
+  it("returns pr and sessionId from the issue frontmatter", async () => {
+    const dav = await loadWebdavClient();
+    client.getFileContents.mockImplementation((path: string) => {
+      if (path === "/todo/abc.md") {
+        return Promise.resolve(
+          "---\nproject: project-a\npr: https://github.com/org/repo/pull/4\nsessionId: sess-4\n---\n# Subject\n\nBody"
+        );
+      }
+      return Promise.reject(notFound());
+    });
+
+    expect(await dav.getIssue("abc")).toEqual({
+      id: "abc",
+      subject: "Subject",
+      content: "Body",
+      status: "todo",
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/4",
+      sessionId: "sess-4",
+    });
+  });
+
   it("returns null when the id isn't in any column", async () => {
     const dav = await loadWebdavClient();
     client.getFileContents.mockRejectedValue(notFound());
@@ -200,6 +222,27 @@ describe("updateIssueContent", () => {
     expect(client.putFileContents).toHaveBeenCalledWith(
       "/todo/abc.md",
       "---\nproject: project-a\n---\n# Subject\n\nnew content\n",
+      { overwrite: true }
+    );
+  });
+
+  it("keeps pr and sessionId when rewriting the content", async () => {
+    const dav = await loadWebdavClient();
+    client.putFileContents.mockResolvedValue(undefined);
+
+    const issue = {
+      id: "abc",
+      subject: "Subject",
+      content: "old",
+      status: "todo" as const,
+      pr: "https://github.com/org/repo/pull/4",
+      sessionId: "sess-4",
+    };
+    await dav.updateIssueContent(issue, "new content");
+
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/todo/abc.md",
+      "---\npr: https://github.com/org/repo/pull/4\nsessionId: sess-4\n---\n# Subject\n\nnew content\n",
       { overwrite: true }
     );
   });

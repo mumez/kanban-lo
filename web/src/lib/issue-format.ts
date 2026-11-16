@@ -45,8 +45,18 @@ export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
   return COLUMNS.filter((column) => !hidden.has(column));
 }
 
+/** Optional YAML frontmatter. Blank values are omitted when an issue is written. */
+export interface IssueFrontmatter {
+  /** Project classification. Issues without one stay visible under every project filter. */
+  project?: string;
+  /** Pull request URL */
+  pr?: string;
+  /** Id of the agent session assigned to this issue */
+  sessionId?: string;
+}
+
 // Issue type
-export interface Issue {
+export interface Issue extends IssueFrontmatter {
   /** Filename without extension, e.g. "1735000000000-fix-login-bug" */
   id: string;
   /** Title extracted from the Markdown H1 */
@@ -55,27 +65,41 @@ export interface Issue {
   content: string;
   /** Status (column) this issue is in */
   status: Column;
-  /** Optional project classification, from the issue's YAML frontmatter */
-  project?: string;
 }
 
 // ----------------------------------------------------------------
 // Markdown parse / serialize
 // ----------------------------------------------------------------
 
-/** "---\nproject: x\n---\n# subject\n\ncontent" → { subject, content, project } */
+const FRONTMATTER_KEYS = ["project", "pr", "sessionId"] as const;
+
+/** A single-line frontmatter value, or undefined when missing or blank. */
+function singleLine(value: string | undefined): string | undefined {
+  const trimmed = value?.split(/[\r\n]/, 1)[0]?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/** Read one `key: value` line. `[ \t]` keeps an empty value from swallowing the next key. */
+function frontmatterValue(frontmatter: string, key: (typeof FRONTMATTER_KEYS)[number]): string | undefined {
+  const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*(.*)$`, "m"));
+  return singleLine(match?.[1]);
+}
+
+/** "---\nproject: x\npr: url\nsessionId: id\n---\n# subject\n\ncontent" → parsed issue text */
 export function parseMarkdown(
   text: string
-): { subject: string; content: string; project?: string } {
+): { subject: string; content: string } & IssueFrontmatter {
   let body = text.replace(/\r\n/g, "\n");
-  let project: string | undefined;
+  const fields: IssueFrontmatter = {};
 
   if (body.startsWith("---\n")) {
     const end = body.indexOf("\n---", 4);
     if (end !== -1) {
       const frontmatter = body.slice(4, end);
-      const match = frontmatter.match(/^project:\s*(.+)$/m);
-      if (match) project = match[1].trim();
+      for (const key of FRONTMATTER_KEYS) {
+        const value = frontmatterValue(frontmatter, key);
+        if (value) fields[key] = value;
+      }
       body = body.slice(end + 4).replace(/^\n/, "");
     }
   }
@@ -99,14 +123,22 @@ export function parseMarkdown(
   }
 
   const content = lines.slice(contentStart).join("\n").trimEnd();
-  return project ? { subject, content, project } : { subject, content };
+  return { subject, content, ...fields };
 }
 
-/** { subject, content, project } → Markdown text */
-export function serializeMarkdown(subject: string, content: string, project?: string): string {
+/** Issue text → Markdown, with a frontmatter block only for values that are set. */
+export function serializeMarkdown(
+  subject: string,
+  content: string,
+  frontmatter?: IssueFrontmatter
+): string {
   const body = content.trim();
-  const frontmatter = project ? `---\nproject: ${project}\n---\n` : "";
-  return frontmatter + (body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`);
+  const lines = FRONTMATTER_KEYS.flatMap((key) => {
+    const value = singleLine(frontmatter?.[key]);
+    return value ? [`${key}: ${value}`] : [];
+  });
+  const header = lines.length > 0 ? `---\n${lines.join("\n")}\n---\n` : "";
+  return header + (body ? `# ${subject}\n\n${body}\n` : `# ${subject}\n`);
 }
 
 // ----------------------------------------------------------------

@@ -95,4 +95,24 @@ describe("IssueViewModal", () => {
     await waitFor(() => expect(screen.queryByRole("textbox")).not.toBeInTheDocument());
     expect(kanbanStore.viewModal.issue?.content).toBe("Updated **content**");
   });
+
+  it("keeps pr and sessionId when the content is saved", async () => {
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndOpen({
+      ...issue,
+      pr: "https://github.com/org/repo/pull/3",
+      sessionId: "sess-3",
+    });
+    render(() => <IssueViewModal />);
+
+    screen.getByText("Edit").click();
+    await waitFor(() => expect(screen.getByRole("textbox")).toBeInTheDocument());
+    screen.getByText("Save").click();
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.project).toBe("project-a");
+    expect(written.pr).toBe("https://github.com/org/repo/pull/3");
+    expect(written.sessionId).toBe("sess-3");
+  });
 });
