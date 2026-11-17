@@ -11,3 +11,6 @@ Thumbs.db
 
 # Claude
 CLAUDE.local.md
+
+# status hook watcher single-instance lock
+hooks/.watcher.lock

@@ -88,6 +88,11 @@ requires at least one of --status, --content, --append-content, --project, --pr,
 (`change-issue accepts only one of --content or --append-content`) — use one or the other
 depending on whether the user wants to replace or add to the issue body.
 
+Moving an existing issue into `reviewing` or `releasing` can run local hooks on the machine
+that stores the issue files, when `mise run watch-status-hooks` is already running there.
+Creating an issue in that column does not. The CLI does not start the watcher or invoke hooks
+itself. See `hooks/README.md` in the kanban-lo checkout.
+
 **Frontmatter (`project`, `pr`, `sessionId`)**: an issue file may start with a YAML frontmatter
 block holding these three optional keys. Never edit that block through `--content` or
 `--append-content` — those only touch the body below the `# Subject` line. Use the dedicated

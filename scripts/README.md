@@ -65,3 +65,17 @@ mise run list-projects
 npm run test       # kbl unit tests
 npm run typecheck  # type-check without emitting
 ```
+
+## Status hook watcher
+
+`watch-status-hooks.sh` (repository `scripts/`) is a resident process, separate from `kbl`. It watches `issues/reviewing` and `issues/releasing` and runs `hooks/<status>/moved_to/` when an issue file is moved in. `kbl` itself does not run hooks.
+
+```bash
+# from the repository root; stays in the foreground
+scripts/watch-status-hooks.sh
+
+# or
+mise run watch-status-hooks
+```
+
+Requires `inotifywait` (`inotify-tools`) on the Linux host that holds `issues/`. A second start prints `status hook watcher is already running` and exits. Hook filenames, arguments, and the 2 second debounce are documented in [../hooks/README.md](../hooks/README.md).
