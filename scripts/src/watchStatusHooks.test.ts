@@ -4,8 +4,14 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
-import { consumeLines, startStatusHookWatcher, type StatusHookWatcher } from "./watchStatusHooks";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_DEBOUNCE_MS, type MovedIssue } from "./statusHooks";
+import {
+  consumeLines,
+  MoveDebouncer,
+  startStatusHookWatcher,
+  type StatusHookWatcher,
+} from "./watchStatusHooks";
 
 const hasInotifywait = spawnSync("which", ["inotifywait"]).status === 0;
 
@@ -96,14 +102,12 @@ describe("startStatusHookWatcher", () => {
       await delay(600);
       expect(await readIfExists(log)).toBe("");
 
-      const started = Date.now();
       await writeFile(path.join(issuesDir, "holding", "1-moved.md"), "# Moved\n");
       renameSync(path.join(issuesDir, "holding", "1-moved.md"), path.join(issuesDir, "reviewing", "1-moved.md"));
 
       await delay(150);
       expect(await readIfExists(log)).toBe("");
       const text = await waitForText(log, 3000);
-      expect(Date.now() - started).toBeGreaterThanOrEqual(350);
       expect(text).toBe(`reviewing ${path.join(issuesDir, "reviewing", "1-moved.md")}\n`);
     });
 
@@ -178,6 +182,139 @@ describe.skipIf(!hasInotifywait)("watch-status-hooks.sh", () => {
     expect(await waitForText(log, 5000)).toBe(`reviewing ${path.join(issuesDir, "reviewing", "3-shell.md")}\n`);
   }, 20000);
 });
+
+describe("MoveDebouncer", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function moved(status: MovedIssue["status"], issueId: string): MovedIssue {
+    return {
+      filePath: `/issues/${status}/${issueId}.md`,
+      status,
+      issueId,
+    };
+  }
+
+  it("waits out the window and runs once for duplicate moves of the same issue", async () => {
+    const runs: MovedIssue[] = [];
+    const present = new Set<string>();
+    const debouncer = new MoveDebouncer({
+      debounceMs: DEFAULT_DEBOUNCE_MS,
+      fileExists: (filePath) => present.has(filePath),
+      run: async (move) => {
+        runs.push(move);
+      },
+    });
+    const move = moved("reviewing", "1-a");
+    present.add(move.filePath);
+
+    debouncer.notify(move);
+    debouncer.notify(move);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(runs).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(runs).toEqual([move]);
+  });
+
+  it("keeps a separate window per issue", async () => {
+    const runs: string[] = [];
+    const debouncer = new MoveDebouncer({
+      debounceMs: 2000,
+      fileExists: () => true,
+      run: async (move) => {
+        runs.push(move.issueId);
+      },
+    });
+
+    debouncer.notify(moved("reviewing", "a"));
+    await vi.advanceTimersByTimeAsync(1500);
+    debouncer.notify(moved("releasing", "b"));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(runs).toEqual(["a"]);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(runs).toEqual(["a", "b"]);
+  });
+
+  it("runs only the latest column when the same issue moves again inside the window", async () => {
+    const runs: MovedIssue[] = [];
+    const present = new Set<string>();
+    const debouncer = new MoveDebouncer({
+      debounceMs: 2000,
+      fileExists: (filePath) => present.has(filePath),
+      run: async (move) => {
+        runs.push(move);
+      },
+    });
+    const reviewing = moved("reviewing", "1-a");
+    const releasing = moved("releasing", "1-a");
+    // Both paths stay present, so a timer that was not cancelled would still run.
+    present.add(reviewing.filePath);
+    present.add(releasing.filePath);
+
+    debouncer.notify(reviewing);
+    await vi.advanceTimersByTimeAsync(1500);
+    debouncer.notify(releasing);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(runs).toEqual([releasing]);
+  });
+
+  it("does not run hooks when the file has left that column before the window ends", async () => {
+    const runs: MovedIssue[] = [];
+    const present = new Set<string>();
+    const debouncer = new MoveDebouncer({
+      debounceMs: 2000,
+      fileExists: (filePath) => present.has(filePath),
+      run: async (move) => {
+        runs.push(move);
+      },
+    });
+    const move = moved("reviewing", "1-a");
+    present.add(move.filePath);
+    debouncer.notify(move);
+    present.delete(move.filePath);
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(runs).toEqual([]);
+  });
+
+  it("logs a hook failure and stays up", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const debouncer = new MoveDebouncer({
+      debounceMs: 2000,
+      fileExists: () => true,
+      run: async () => {
+        throw new Error("boom");
+      },
+    });
+
+    debouncer.notify(moved("reviewing", "1-a"));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+});
+
+it("prints the debounce message and no stack when KBL_HOOK_DEBOUNCE_MS is not an integer", () => {
+  const result = spawnSync("npx", ["tsx", "src/watchStatusHooks.ts"], {
+    cwd: fileURLToPath(new URL("..", import.meta.url)),
+    env: { ...process.env, KBL_HOOK_DEBOUNCE_MS: "abc" },
+    encoding: "utf8",
+    timeout: 15000,
+  });
+
+  expect(result.status).toBe(1);
+  const output = `${result.stdout}${result.stderr}`;
+  expect(output).toContain("KBL_HOOK_DEBOUNCE_MS must be a non-negative integer, got abc");
+  expect(output).not.toMatch(/\n\s+at /);
+}, 20000);
 
 function waitForOutput(chunks: string[], needle: string, timeoutMs: number): Promise<void> {
   const started = Date.now();

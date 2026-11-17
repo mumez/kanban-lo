@@ -6,9 +6,9 @@ import { Command } from "commander";
 import {
   DEFAULT_DEBOUNCE_MS,
   HOOK_STATUSES,
-  MoveDebouncer,
   parseMovedTo,
   runStatusHooks,
+  type MovedIssue,
 } from "./statusHooks";
 
 /** Split a stdout chunk into complete lines, keeping a trailing partial line. */
@@ -42,6 +42,62 @@ function debounceFromEnv(): number {
   const raw = process.env.KBL_HOOK_DEBOUNCE_MS;
   if (raw === undefined || raw === "") return DEFAULT_DEBOUNCE_MS;
   return parseDebounce(raw, "KBL_HOOK_DEBOUNCE_MS");
+}
+
+export interface MoveDebouncerOptions {
+  debounceMs: number;
+  fileExists: (filePath: string) => boolean;
+  run: (move: MovedIssue) => Promise<void>;
+}
+
+/**
+ * Per-issue debounce for the watcher. A second move of the same issue (drag
+ * from reviewing straight through to releasing, or a duplicate inotify event)
+ * resets the window and forgets the earlier column. When the window ends,
+ * hooks run only if that file is still at the latest path.
+ */
+export class MoveDebouncer {
+  private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly latest = new Map<string, MovedIssue>();
+
+  constructor(private readonly options: MoveDebouncerOptions) {}
+
+  notify(move: MovedIssue): void {
+    const pending = this.timers.get(move.issueId);
+    if (pending) clearTimeout(pending);
+    this.latest.set(move.issueId, move);
+    this.timers.set(
+      move.issueId,
+      setTimeout(() => this.fire(move.issueId), this.options.debounceMs),
+    );
+  }
+
+  /** Drop pending moves. Used when the watcher is shutting down. */
+  cancelAll(): void {
+    for (const timer of this.timers.values()) clearTimeout(timer);
+    this.timers.clear();
+    this.latest.clear();
+  }
+
+  private fire(issueId: string): Promise<void> {
+    const timer = this.timers.get(issueId);
+    if (timer) clearTimeout(timer);
+    this.timers.delete(issueId);
+    const current = this.latest.get(issueId);
+    this.latest.delete(issueId);
+    if (!current) return Promise.resolve();
+    return this.runIfStillThere(current);
+  }
+
+  private async runIfStillThere(move: MovedIssue): Promise<void> {
+    try {
+      if (!this.options.fileExists(move.filePath)) return;
+      await this.options.run(move);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[status-hooks] hooks failed for ${move.filePath}: ${message}`);
+    }
+  }
 }
 
 export interface StatusHookWatcher {
@@ -239,5 +295,10 @@ function isExecutedDirectly(): boolean {
 }
 
 if (isExecutedDirectly()) {
-  void main();
+  // Includes a bad KBL_HOOK_DEBOUNCE_MS, which throws while the commander
+  // default is evaluated, before main's own try/catch.
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });
 }
