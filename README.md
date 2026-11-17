@@ -10,6 +10,7 @@ A simple kanban board for local environments.
 - **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop to reorder and move between columns, create/edit/delete via modal
 - **WebDAV** — the SPA reads and writes files over WebDAV. Issues can also be managed by manipulating files directly, without the UI
 - **Admin CLI** — `kbl` (in `scripts/`) manages issues over WebDAV from the command line, for admins or coding agents
+- **Status hooks** — optional scripts run when an issue file is moved into `reviewing` or `releasing`. See [hooks/README.md](hooks/README.md)
 
 ## Directory structure
 
@@ -32,7 +33,11 @@ kanban-lo/
 │   │   └── components/
 │   ├── package.json
 │   └── vite.config.ts
+├── hooks/              # optional scripts for reviewing / releasing moves
+│   ├── reviewing/moved_to/
+│   └── releasing/moved_to/
 ├── scripts/            # kbl admin CLI (Node + TypeScript)
+│   ├── watch-status-hooks.sh
 │   └── src/
 │       ├── cli.ts        # subcommand wiring
 │       ├── webdavClient.ts # WebDAV client for the CLI
@@ -124,6 +129,18 @@ Requests to `/dav/*` are automatically proxied by Vite to `localhost:8282`.
 
 See [scripts/README.md](scripts/README.md) for the full command reference.
 
+## Status hooks
+
+`scripts/watch-status-hooks.sh` stays running and watches `issues/reviewing` and `issues/releasing`. When an issue `.md` file is moved into one of those directories, it waits 2 seconds, then runs the scripts in `hooks/<status>/moved_to/` in filename order. Put a script in that directory to register it. A file created directly in the column, or edited in place, does not run hooks.
+
+The watcher needs Linux and `inotify-tools`, on the machine that holds the `issues/` directory. Start it once; a second start exits and leaves the running one alone.
+
+```bash
+mise run watch-status-hooks
+```
+
+See [hooks/README.md](hooks/README.md) for the script arguments and the debounce rules.
+
 ## Coding agent skill
 
 `skills/kanban-lo/` is an [Agent Skill](https://docs.claude.com/en/docs/claude-code/skills) that lets a coding agent (e.g. Claude Code) operate the board directly, without a human driving the UI or CLI. It wraps the `kbl` CLI's subcommands (`list-issues`, `fetch-issue`, `change-issue`, `create-issue`, `list-projects`) via `mise run`, and documents the required environment (`KBL_HOME` pointing at this checkout, `KBL_DAV_BASE` pointing at a reachable WebDAV server) plus guardrails such as confirming before `--content` overwrites an issue and checking `list-projects` before guessing a `--project` name.
@@ -160,6 +177,7 @@ mise run archive-issue -- --id <id>
 mise run unarchive-issue -- --id <id> --status todo
 mise run list-archives
 mise run list-projects
+mise run watch-status-hooks
 ```
 
 Run `mise tasks` to see the full list, or [scripts/README.md](scripts/README.md) for the underlying `kbl` command reference.
