@@ -33,6 +33,14 @@ describe("KanbanColumn", () => {
     expect(screen.getByText("0")).toBeInTheDocument();
   });
 
+  it("keeps a drop target on the column title", () => {
+    renderColumn("todo");
+    expect(screen.getByRole("heading", { name: "Todo" }).closest("[data-column-header]")).toHaveAttribute(
+      "data-column-header",
+      "todo"
+    );
+  });
+
   it("lists only the issues belonging to this column, with the correct count", async () => {
     vi.mocked(dav.loadAllIssues).mockResolvedValue([
       { id: "1", subject: "In todo", content: "", status: "todo" },

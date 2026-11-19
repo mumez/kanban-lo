@@ -32,6 +32,7 @@ declare module "solid-js" {
     interface Directives {
       sortable: any;
       droppable: any;
+      headerDroppable: any;
       draggable: any;
     }
   }
