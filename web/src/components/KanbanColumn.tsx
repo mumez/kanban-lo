@@ -1,7 +1,8 @@
 import { type Component, For, Show } from "solid-js";
-import { createDroppable, SortableProvider } from "@thisbeyond/solid-dnd";
+import { createDroppable, SortableProvider, useDragDropContext } from "@thisbeyond/solid-dnd";
 import type { Column } from "../types";
 import { COLUMN_LABELS, COLUMN_COLORS } from "../types";
+import { columnHeaderDroppableId, columnShowsDropHint } from "../lib/kanban-drag";
 import { kanbanStore } from "../store/kanban";
 import IssueCard from "./IssueCard";
 
@@ -11,19 +12,39 @@ interface Props {
 
 const KanbanColumn: Component<Props> = (props) => {
   const droppable = createDroppable(props.column);
+  const headerDroppable = createDroppable(columnHeaderDroppableId(props.column));
+  const dnd = useDragDropContext();
   const issues = () => kanbanStore.visibleIssuesByColumn(props.column);
+  // The column body is only the active droppable for empty space. A card or
+  // the title can be the target instead; the hint follows all three.
+  const showDropHint = () => {
+    const activeId = dnd?.[0].active.droppableId;
+    if (activeId == null) return false;
+    return columnShowsDropHint(
+      props.column,
+      activeId,
+      issues().map((issue) => issue.id)
+    );
+  };
 
   return (
     <div
       use:droppable
       class="flex flex-col gap-3 min-h-[200px] rounded-xl p-3 bg-base-200 transition-colors"
       classList={{
-        "ring-2 ring-primary ring-offset-1": droppable.isActiveDroppable,
-        "bg-primary/5": droppable.isActiveDroppable,
+        "ring-2 ring-primary ring-offset-1": showDropHint(),
+        "bg-primary/5": showDropHint(),
       }}
     >
-      {/* Column header */}
-      <div class="flex items-center justify-between px-1">
+      {/* Title row. Its own droppable so a full column can still be targeted from the top. */}
+      <div
+        use:headerDroppable
+        data-column-header={props.column}
+        class="flex items-center justify-between px-1 rounded-lg"
+        classList={{
+          "bg-primary/15 ring-2 ring-primary ring-offset-1": headerDroppable.isActiveDroppable,
+        }}
+      >
         <div class="flex items-center gap-2">
           <span class={`badge badge-sm ${COLUMN_COLORS[props.column]}`}>
             {issues().length}
