@@ -3,11 +3,11 @@ import {
   DragDropProvider,
   DragDropSensors,
   DragOverlay,
-  closestCenter,
+  type CollisionDetector,
   type DragEventHandler,
 } from "@thisbeyond/solid-dnd";
-import type { Column } from "../types";
 import { kanbanStore } from "../store/kanban";
+import { detectKanbanCollision, resolveDrop } from "../lib/kanban-drag";
 import KanbanColumn from "./KanbanColumn";
 
 /**
@@ -30,31 +30,21 @@ function wideScreenTrackClass(columnCount: number): string {
   return WIDE_SCREEN_TRACK_CLASS[tracks];
 }
 
-/** Which column an id belongs to: a column droppable (empty-area drop) or a card's column */
-function columnOf(id: string | number): Column | undefined {
-  const columns = kanbanStore.visibleColumns;
-  if ((columns as (string | number)[]).includes(id)) return id as Column;
-  return columns.find((column) =>
-    kanbanStore.issuesByColumn(column).some((issue) => issue.id === id)
-  );
-}
+const collisionDetector: CollisionDetector = (draggable, droppables, context) =>
+  detectKanbanCollision(draggable, droppables, context.activeDroppableId);
 
 const Board: Component = () => {
   const handleDragEnd: DragEventHandler = ({ draggable, droppable }) => {
     if (!draggable || !droppable) return;
-    const issueId = draggable.id as string;
-    const toColumn = columnOf(droppable.id);
-    if (!toColumn) return;
-
-    const columnIssues = kanbanStore.issuesByColumn(toColumn);
-    const overIndex = columnIssues.findIndex((issue) => issue.id === droppable.id);
-    const toIndex = overIndex === -1 ? columnIssues.length : overIndex;
-
-    kanbanStore.reorderIssue(issueId, toColumn, toIndex);
+    const resolved = resolveDrop(String(droppable.id), kanbanStore.visibleColumns, (column) =>
+      kanbanStore.issuesByColumn(column).map((issue) => issue.id)
+    );
+    if (!resolved) return;
+    kanbanStore.reorderIssue(String(draggable.id), resolved.column, resolved.toIndex);
   };
 
   return (
-    <DragDropProvider onDragEnd={handleDragEnd} collisionDetector={closestCenter}>
+    <DragDropProvider onDragEnd={handleDragEnd} collisionDetector={collisionDetector}>
       <DragDropSensors>
         <div
           class={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 ${wideScreenTrackClass(kanbanStore.visibleColumns.length)}`}
