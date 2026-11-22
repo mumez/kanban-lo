@@ -68,7 +68,7 @@ npm run typecheck  # type-check without emitting
 
 ## Status hook watcher
 
-`watch-status-hooks.sh` (repository `scripts/`) is a resident process, separate from `kbl`. It watches `issues/reviewing` and `issues/releasing` and runs `hooks/<status>/moved_to/` when an issue file is moved in. `kbl` itself does not run hooks.
+`watch-status-hooks.sh` (repository `scripts/`) is a resident process, separate from `kbl`. It watches `issues/working`, `issues/reviewing`, and `issues/releasing` and runs `hooks/<status>/moved_to/` when an issue file is moved in. `kbl` itself does not run hooks.
 
 ```bash
 # from the repository root; stays in the foreground
