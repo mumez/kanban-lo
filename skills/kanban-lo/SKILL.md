@@ -90,7 +90,7 @@ requires at least one of --status, --content, --append-content, --project, --wor
 (`change-issue accepts only one of --content or --append-content`) — use one or the other
 depending on whether the user wants to replace or add to the issue body.
 
-Moving an existing issue into `reviewing` or `releasing` can run local hooks on the machine
+Moving an existing issue into `working`, `reviewing`, or `releasing` can run local hooks on the machine
 that stores the issue files, when `mise run watch-status-hooks` is already running there.
 Creating an issue in that column does not. The CLI does not start the watcher or invoke hooks
 itself. See `hooks/README.md` in the kanban-lo checkout.

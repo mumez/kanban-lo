@@ -80,5 +80,5 @@ dir = "scripts"
 run = "npx tsx src/cli.ts list-archives"
 
 [tasks.watch-status-hooks]
-description = "Watch issues/reviewing and issues/releasing and run hooks/<status>/moved_to (stays resident; only one instance)"
+description = "Watch issues/working, issues/reviewing, and issues/releasing and run hooks/<status>/moved_to (stays resident; only one instance)"
 run = "bash scripts/watch-status-hooks.sh"

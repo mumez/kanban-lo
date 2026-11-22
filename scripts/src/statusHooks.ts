@@ -6,7 +6,7 @@ import path from "node:path";
  * Columns whose incoming moves run user hooks. Other columns stay quiet:
  * a move into `todo` or `done` is not an event anyone registered for.
  */
-export const HOOK_STATUSES = ["reviewing", "releasing"] as const;
+export const HOOK_STATUSES = ["working", "reviewing", "releasing"] as const;
 export type HookStatus = (typeof HOOK_STATUSES)[number];
 
 /** How long a move must sit still before its hooks run. The board's drag-and-drop MOVEs the file and then writes `_order.json`; two seconds lets that settle, and lets a card that only passes through a column leave before hooks fire. */

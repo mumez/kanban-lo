@@ -10,7 +10,7 @@ A simple kanban board for local environments.
 - **Web UI** — an SPA built with SolidJS + daisyUI. Drag and drop to reorder and move between columns, create/edit/delete via modal
 - **WebDAV** — the SPA reads and writes files over WebDAV. Issues can also be managed by manipulating files directly, without the UI
 - **Admin CLI** — `kbl` (in `scripts/`) manages issues over WebDAV from the command line, for admins or coding agents
-- **Status hooks** — optional scripts run when an issue file is moved into `reviewing` or `releasing`. See [hooks/README.md](hooks/README.md)
+- **Status hooks** — optional scripts run when an issue file is moved into `working`, `reviewing`, or `releasing`. See [hooks/README.md](hooks/README.md)
 
 ## Directory structure
 
@@ -33,7 +33,8 @@ kanban-lo/
 │   │   └── components/
 │   ├── package.json
 │   └── vite.config.ts
-├── hooks/              # optional scripts for reviewing / releasing moves
+├── hooks/              # optional scripts for working / reviewing / releasing moves
+│   ├── working/moved_to/
 │   ├── reviewing/moved_to/
 │   └── releasing/moved_to/
 ├── scripts/            # kbl admin CLI (Node + TypeScript)
@@ -133,7 +134,7 @@ See [scripts/README.md](scripts/README.md) for the full command reference.
 
 ## Status hooks
 
-`scripts/watch-status-hooks.sh` stays running and watches `issues/reviewing` and `issues/releasing`. When an issue `.md` file is moved into one of those directories, it waits 2 seconds, then runs the scripts in `hooks/<status>/moved_to/` in filename order. Put a script in that directory to register it. A file created directly in the column, or edited in place, does not run hooks.
+`scripts/watch-status-hooks.sh` stays running and watches `issues/working`, `issues/reviewing`, and `issues/releasing`. When an issue `.md` file is moved into one of those directories, it waits 2 seconds, then runs the scripts in `hooks/<status>/moved_to/` in filename order. Put a script in that directory to register it. A file created directly in the column, or edited in place, does not run hooks.
 
 The watcher needs Linux and `inotify-tools`, on the machine that holds the `issues/` directory. Start it once; a second start exits and leaves the running one alone.
 
