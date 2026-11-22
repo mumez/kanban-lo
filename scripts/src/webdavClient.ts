@@ -2,6 +2,7 @@ import { createClient, type WebDAVClient, type FileStat } from "webdav";
 import {
   type Column,
   type Issue,
+  type IssueFrontmatter,
   COLUMNS,
   parseMarkdown,
   serializeMarkdown,
@@ -197,7 +198,7 @@ export async function createIssue(
  */
 export async function updateIssue(
   issue: Issue,
-  changes: Partial<Pick<Issue, "content" | "project" | "pr" | "sessionId">>
+  changes: Partial<Pick<Issue, "content">> & IssueFrontmatter
 ): Promise<Issue> {
   const client = getClient();
   const updated: Issue = { ...issue, ...changes };
@@ -235,13 +236,10 @@ export async function changeIssueStatus(issue: Issue, toColumn: Column): Promise
 // ----------------------------------------------------------------
 
 /** An issue sitting in _archive/ — it has no column, so no `status`. */
-export interface ArchivedIssue {
+export interface ArchivedIssue extends IssueFrontmatter {
   id: string;
   subject: string;
   content: string;
-  project?: string;
-  pr?: string;
-  sessionId?: string;
 }
 
 /** Archive an issue: move its file to _archive/, out of its current column. */

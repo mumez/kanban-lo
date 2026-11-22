@@ -21,7 +21,12 @@ function moved(status: MovedIssue["status"], issueId: string): MovedIssue {
 describe("parseMovedTo", () => {
   const issuesDir = "/repo/issues";
 
-  it("reads reviewing and releasing from the directory the file moved into", () => {
+  it("reads working, reviewing, and releasing from the directory the file moved into", () => {
+    expect(parseMovedTo("/repo/issues/working/3-start.md", issuesDir)).toEqual({
+      filePath: "/repo/issues/working/3-start.md",
+      status: "working",
+      issueId: "3-start",
+    });
     expect(parseMovedTo("/repo/issues/reviewing/1753600000000-example.md", issuesDir)).toEqual({
       filePath: "/repo/issues/reviewing/1753600000000-example.md",
       status: "reviewing",
@@ -36,7 +41,6 @@ describe("parseMovedTo", () => {
 
   it("ignores other columns, non-markdown files, and nested paths", () => {
     expect(parseMovedTo("/repo/issues/todo/1-a.md", issuesDir)).toBeNull();
-    expect(parseMovedTo("/repo/issues/working/1-a.md", issuesDir)).toBeNull();
     expect(parseMovedTo("/repo/issues/done/1-a.md", issuesDir)).toBeNull();
     expect(parseMovedTo("/repo/issues/pending/1-a.md", issuesDir)).toBeNull();
     expect(parseMovedTo("/repo/issues/reviewing/_order.json", issuesDir)).toBeNull();

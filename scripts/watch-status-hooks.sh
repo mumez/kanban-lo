@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resident watcher for issues/reviewing and issues/releasing.
+# Resident watcher for issues/working, issues/reviewing, and issues/releasing.
 # Runs the scripts in hooks/<status>/moved_to/ when an issue file is moved in.
 # See hooks/README.md. A second start exits without disturbing the one already running.
 set -euo pipefail

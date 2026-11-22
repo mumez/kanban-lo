@@ -14,7 +14,7 @@ beforeEach(() => {
 
 it("throws when nothing to change is given", async () => {
   await expect(changeIssue({ id: "abc" })).rejects.toThrow(
-    "change-issue requires at least one of --status, --content, --append-content, --project, --pr, or --session-id"
+    "change-issue requires at least one of --status, --content, --append-content, --project, --working-dir, --spec-level, --pr, or --session-id"
   );
   expect(dav.getIssue).not.toHaveBeenCalled();
 });
@@ -116,4 +116,23 @@ it("writes content and frontmatter in one update", async () => {
 
   expect(dav.updateIssue).toHaveBeenCalledTimes(1);
   expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { content: "old\n\nmore", sessionId: "sess-2" });
+});
+
+it("sets workingDir and specLevel", async () => {
+  vi.mocked(dav.getIssue).mockResolvedValue(baseIssue);
+  vi.mocked(dav.updateIssue).mockResolvedValue(baseIssue);
+
+  await changeIssue({ id: "abc", workingDir: "/home/me/repo", specLevel: "detailed" });
+
+  expect(dav.updateIssue).toHaveBeenCalledWith(baseIssue, { workingDir: "/home/me/repo", specLevel: "detailed" });
+});
+
+it("passes empty workingDir and specLevel through so they get removed", async () => {
+  const issue = { ...baseIssue, workingDir: "/home/me/repo", specLevel: "detailed" };
+  vi.mocked(dav.getIssue).mockResolvedValue(issue);
+  vi.mocked(dav.updateIssue).mockResolvedValue(baseIssue);
+
+  await changeIssue({ id: "abc", workingDir: "", specLevel: "" });
+
+  expect(dav.updateIssue).toHaveBeenCalledWith(issue, { workingDir: "", specLevel: "" });
 });

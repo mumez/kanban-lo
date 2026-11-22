@@ -247,6 +247,27 @@ describe("updateIssue", () => {
     );
   });
 
+  it("keeps workingDir and specLevel when rewriting the content", async () => {
+    const dav = await loadWebdavClient();
+    client.putFileContents.mockResolvedValue(undefined);
+
+    const issue = {
+      id: "abc",
+      subject: "Subject",
+      content: "old",
+      status: "todo" as const,
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
+    };
+    await dav.updateIssue(issue, { content: "new content" });
+
+    expect(client.putFileContents).toHaveBeenCalledWith(
+      "/todo/abc.md",
+      "---\nworkingDir: /home/me/repo\nspecLevel: detailed\n---\n# Subject\n\nnew content\n",
+      { overwrite: true }
+    );
+  });
+
   it("replaces and removes frontmatter values, keeping the content", async () => {
     const dav = await loadWebdavClient();
     client.putFileContents.mockResolvedValue(undefined);

@@ -8,6 +8,8 @@ const IssueModal: Component = () => {
   const [content, setContent] = createSignal("");
   const [targetColumn, setTargetColumn] = createSignal<Column>("todo");
   const [project, setProject] = createSignal("");
+  const [workingDir, setWorkingDir] = createSignal("");
+  const [specLevel, setSpecLevel] = createSignal("");
   const [pr, setPr] = createSignal("");
   const [sessionId, setSessionId] = createSignal("");
 
@@ -32,6 +34,8 @@ const IssueModal: Component = () => {
         setContent(kanbanStore.modal.issue.content);
         setTargetColumn(kanbanStore.modal.issue.status);
         setProject(kanbanStore.modal.issue.project ?? "");
+        setWorkingDir(kanbanStore.modal.issue.workingDir ?? "");
+        setSpecLevel(kanbanStore.modal.issue.specLevel ?? "");
         setPr(kanbanStore.modal.issue.pr ?? "");
         setSessionId(kanbanStore.modal.issue.sessionId ?? "");
       } else {
@@ -40,6 +44,8 @@ const IssueModal: Component = () => {
         const requested = kanbanStore.modal.column;
         setTargetColumn(untrack(() => columnToShow(requested)));
         setProject(kanbanStore.selectedProject ?? "");
+        setWorkingDir("");
+        setSpecLevel("");
         setPr("");
         setSessionId("");
       }
@@ -72,6 +78,8 @@ const IssueModal: Component = () => {
       }
       await kanbanStore.saveIssue(issue.id, s, content().trim(), {
         project: p,
+        workingDir: workingDir().trim() || undefined,
+        specLevel: specLevel().trim() || undefined,
         pr: pr().trim() || undefined,
         sessionId: sessionId().trim() || undefined,
       });
@@ -178,9 +186,36 @@ const IssueModal: Component = () => {
                 </div>
               </Show>
 
-              {/* Optional links, only once the issue exists */}
+              {/* Optional work context and links, only once the issue exists */}
               <Show when={!isCreate()}>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div class="form-control">
+                    <label class="label" for="issue-working-dir">
+                      <span class="label-text font-medium">Working Dir</span>
+                    </label>
+                    <input
+                      id="issue-working-dir"
+                      type="text"
+                      class="input input-bordered w-full"
+                      placeholder="/path/to/repo"
+                      value={workingDir()}
+                      onInput={(e) => setWorkingDir(e.currentTarget.value)}
+                    />
+                  </div>
+
+                  <div class="form-control">
+                    <label class="label" for="issue-spec-level">
+                      <span class="label-text font-medium">Spec Level</span>
+                    </label>
+                    <input
+                      id="issue-spec-level"
+                      type="text"
+                      class="input input-bordered w-full"
+                      value={specLevel()}
+                      onInput={(e) => setSpecLevel(e.currentTarget.value)}
+                    />
+                  </div>
+
                   <div class="form-control">
                     <label class="label" for="issue-pr">
                       <span class="label-text font-medium">PR URL</span>

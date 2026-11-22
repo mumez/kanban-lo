@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Example only — this file is not executed.
+# Copy it to a name ending in .sh (for example 000_hook.sh) to enable it.
+# Scripts in this directory run in filename order when an issue file is
+# moved into issues/working. See hooks/README.md.
+#
+# $1 / KBL_FILE_PATH   absolute path of the issue file
+# $2 / KBL_STATUS      working
+# KBL_BODY             {"file_path":"...","status":"working"}
+
+printf '%s\n' "$KBL_BODY"

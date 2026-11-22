@@ -2,7 +2,7 @@ import { createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import type { Column, Issue, ModalMode } from "../types";
 import { COLUMNS } from "../types";
-import { visibleColumns as columnsExceptHidden, type IssueFrontmatter } from "../lib/issue-format";
+import { frontmatterOf, visibleColumns as columnsExceptHidden, type IssueFrontmatter } from "../lib/issue-format";
 import * as dav from "../services/webdav";
 
 // ----------------------------------------------------------------
@@ -186,13 +186,13 @@ async function saveIssue(
   const idx = issues.findIndex((i) => i.id === id);
   if (idx === -1) return;
 
-  const { project, pr, sessionId } = frontmatter;
-  const updated: Issue = { ...issues[idx], subject, content, project, pr, sessionId };
+  const fields = frontmatterOf(frontmatter);
+  const updated: Issue = { ...issues[idx], subject, content, ...fields };
   await run(async () => {
     await dav.updateIssue(updated);
     // Merging an undefined value deletes that key from the store, so a save
-    // that omits pr or sessionId clears it.
-    setIssues(idx, { subject, content, project, pr, sessionId });
+    // that omits a frontmatter field clears it.
+    setIssues(idx, { subject, content, ...fields });
   });
 }
 

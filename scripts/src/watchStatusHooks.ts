@@ -109,7 +109,7 @@ export interface StatusHookWatcher {
 }
 
 /**
- * Watch `issues/reviewing` and `issues/releasing` for inotify `moved_to`
+ * Watch `issues/working`, `issues/reviewing`, and `issues/releasing` for inotify `moved_to`
  * (a rename into the directory — not a create, and not an in-place edit)
  * and run that column's hooks after the debounce window.
  */
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
   const program = new Command();
   program
     .name("watch-status-hooks")
-    .description("Watch issues/reviewing and issues/releasing and run hooks when an issue file is moved in")
+    .description("Watch issues/working, issues/reviewing, and issues/releasing and run hooks when an issue file is moved in")
     .option("--issues-dir <path>", "issues directory", path.join(repoRoot, "issues"))
     .option("--hooks-dir <path>", "hooks directory", path.join(repoRoot, "hooks"))
     .option(

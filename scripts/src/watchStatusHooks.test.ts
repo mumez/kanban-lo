@@ -79,12 +79,14 @@ describe("startStatusHookWatcher", () => {
       root = await mkdtemp(path.join(tmpdir(), "kbl-watch-"));
       const issuesDir = path.join(root, "issues");
       const hooksDir = path.join(root, "hooks");
+      await mkdir(path.join(issuesDir, "working"), { recursive: true });
       await mkdir(path.join(issuesDir, "reviewing"), { recursive: true });
       await mkdir(path.join(issuesDir, "releasing"), { recursive: true });
       await mkdir(path.join(issuesDir, "holding"), { recursive: true });
       const log = path.join(root, "log");
       const quotedLog = `'${log.replaceAll("'", "'\\''")}'`;
       await writeHook(path.join(hooksDir, "reviewing", "moved_to", "000_hook.sh"), quotedLog, "reviewing");
+      await writeHook(path.join(hooksDir, "working", "moved_to", "000_hook.sh"), quotedLog, "working");
       await writeHook(path.join(hooksDir, "releasing", "moved_to", "000_hook.sh"), quotedLog, "releasing");
       watcher = startStatusHookWatcher({
         issuesDir,
@@ -109,6 +111,15 @@ describe("startStatusHookWatcher", () => {
       expect(await readIfExists(log)).toBe("");
       const text = await waitForText(log, 3000);
       expect(text).toBe(`reviewing ${path.join(issuesDir, "reviewing", "1-moved.md")}\n`);
+    });
+
+    it("runs working hooks when an issue moves into working", async () => {
+      const { issuesDir, log } = await setup();
+      await writeFile(path.join(issuesDir, "holding", "4-start.md"), "# Start\n");
+      renameSync(path.join(issuesDir, "holding", "4-start.md"), path.join(issuesDir, "working", "4-start.md"));
+
+      const text = await waitForText(log, 3000);
+      expect(text).toBe(`working ${path.join(issuesDir, "working", "4-start.md")}\n`);
     });
 
     it("runs only the column an issue is still in when it moves again inside the window", async () => {
@@ -149,6 +160,7 @@ describe.skipIf(!hasInotifywait)("watch-status-hooks.sh", () => {
     const hooksDir = path.join(root, "hooks");
     const log = path.join(root, "log");
     const lock = path.join(root, "watcher.lock");
+    await mkdir(path.join(issuesDir, "working"), { recursive: true });
     await mkdir(path.join(issuesDir, "reviewing"), { recursive: true });
     await mkdir(path.join(issuesDir, "releasing"), { recursive: true });
     await mkdir(path.join(issuesDir, "holding"), { recursive: true });

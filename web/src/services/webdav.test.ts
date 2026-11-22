@@ -87,6 +87,24 @@ describe("parseMarkdown", () => {
     });
   });
 
+  it("extracts optional workingDir and specLevel from frontmatter", () => {
+    expect(
+      parseMarkdown("---\nworkingDir: /home/me/repo\nspecLevel: detailed\n---\n# Title\n\nBody")
+    ).toEqual({
+      subject: "Title",
+      content: "Body",
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
+    });
+  });
+
+  it("omits blank workingDir and specLevel values", () => {
+    expect(parseMarkdown("---\nworkingDir:\nspecLevel:   \n---\n# Title\n\nBody")).toEqual({
+      subject: "Title",
+      content: "Body",
+    });
+  });
+
   it("omits blank pr and sessionId values", () => {
     expect(parseMarkdown("---\npr:\nsessionId:   \n---\n# Title\n\nBody")).toEqual({
       subject: "Title",
@@ -129,6 +147,21 @@ describe("serializeMarkdown", () => {
       "---\nproject: project-a\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Title\n\nBody\n"
     );
     expect(serializeMarkdown("Title", "", { pr: "  ", sessionId: "" })).toBe("# Title\n");
+  });
+
+  it("writes workingDir and specLevel between project and pr", () => {
+    expect(
+      serializeMarkdown("Title", "Body", {
+        project: "project-a",
+        workingDir: "/home/me/repo",
+        specLevel: "detailed",
+        pr: "https://github.com/org/repo/pull/7",
+        sessionId: "sess-7",
+      })
+    ).toBe(
+      "---\nproject: project-a\nworkingDir: /home/me/repo\nspecLevel: detailed\npr: https://github.com/org/repo/pull/7\nsessionId: sess-7\n---\n# Title\n\nBody\n"
+    );
+    expect(serializeMarkdown("Title", "", { workingDir: " ", specLevel: "" })).toBe("# Title\n");
   });
 
   it("writes a frontmatter block when only sessionId is set", () => {
