@@ -45,29 +45,25 @@ export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
   return COLUMNS.filter((column) => !hidden.has(column));
 }
 
+/**
+ * Optional YAML frontmatter keys, in the order they are written. The single
+ * source for the IssueFrontmatter type, frontmatterOf, and parse/serialize.
+ * - project: classification. Issues without one stay visible under every project filter.
+ * - workingDir: directory the work on this issue happens in
+ * - specLevel: how detailed the issue's specification is
+ * - pr: pull request URL
+ * - sessionId: id of the agent session assigned to this issue
+ */
+export const FRONTMATTER_KEYS = ["project", "workingDir", "specLevel", "pr", "sessionId"] as const;
+
+export type FrontmatterKey = (typeof FRONTMATTER_KEYS)[number];
+
 /** Optional YAML frontmatter. Blank values are omitted when an issue is written. */
-export interface IssueFrontmatter {
-  /** Project classification. Issues without one stay visible under every project filter. */
-  project?: string;
-  /** Directory the work on this issue happens in */
-  workingDir?: string;
-  /** How detailed the issue's specification is */
-  specLevel?: string;
-  /** Pull request URL */
-  pr?: string;
-  /** Id of the agent session assigned to this issue */
-  sessionId?: string;
-}
+export type IssueFrontmatter = { [key in FrontmatterKey]?: string };
 
 /** Pick just the frontmatter fields from an issue, e.g. to pass to serializeMarkdown. */
 export function frontmatterOf(issue: IssueFrontmatter): IssueFrontmatter {
-  return {
-    project: issue.project,
-    workingDir: issue.workingDir,
-    specLevel: issue.specLevel,
-    pr: issue.pr,
-    sessionId: issue.sessionId,
-  };
+  return Object.fromEntries(FRONTMATTER_KEYS.map((key) => [key, issue[key]]));
 }
 
 // Issue type
@@ -86,8 +82,6 @@ export interface Issue extends IssueFrontmatter {
 // Markdown parse / serialize
 // ----------------------------------------------------------------
 
-const FRONTMATTER_KEYS = ["project", "workingDir", "specLevel", "pr", "sessionId"] as const;
-
 /** A single-line frontmatter value, or undefined when missing or blank. */
 function singleLine(value: string | undefined): string | undefined {
   const trimmed = value?.split(/[\r\n]/, 1)[0]?.trim();
@@ -95,7 +89,7 @@ function singleLine(value: string | undefined): string | undefined {
 }
 
 /** Read one `key: value` line. `[ \t]` keeps an empty value from swallowing the next key. */
-function frontmatterValue(frontmatter: string, key: (typeof FRONTMATTER_KEYS)[number]): string | undefined {
+function frontmatterValue(frontmatter: string, key: FrontmatterKey): string | undefined {
   const match = frontmatter.match(new RegExp(`^${key}:[ \\t]*(.*)$`, "m"));
   return singleLine(match?.[1]);
 }
