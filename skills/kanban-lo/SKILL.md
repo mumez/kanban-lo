@@ -66,7 +66,7 @@ across the likely columns and ask the user to confirm the correct id.
 
 ```
 cd $KBL_HOME
-mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--append-content <text>] [--project <name>] [--pr <url>] [--session-id <id>]
+mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--append-content <text>] [--project <name>] [--working-dir <dir>] [--spec-level <level>] [--pr <url>] [--session-id <id>]
 ```
 
 | Flag | Required | Notes |
@@ -76,13 +76,15 @@ mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--app
 | `--content` | no | replaces the issue's content entirely |
 | `--append-content` | no | appends text to the existing content, after a blank line (the CLI adds it — don't add your own) |
 | `--project` | no | replaces the issue's `project` frontmatter value |
+| `--working-dir` | no | replaces the issue's `workingDir` (directory the work happens in) frontmatter value |
+| `--spec-level` | no | replaces the issue's `specLevel` (how detailed the spec is) frontmatter value |
 | `--pr` | no | replaces the issue's `pr` (pull request URL) frontmatter value |
 | `--session-id` | no | replaces the issue's `sessionId` (agent session id) frontmatter value |
 
 Flags can be combined in one call (e.g. `--status reviewing --pr <url> --session-id ""`).
 At least one flag besides `--id` is required — the CLI exits non-zero with `change-issue
-requires at least one of --status, --content, --append-content, --project, --pr, or
---session-id` if none is given.
+requires at least one of --status, --content, --append-content, --project, --working-dir,
+--spec-level, --pr, or --session-id` if none is given.
 
 `--content` and `--append-content` are mutually exclusive, enforced by the CLI
 (`change-issue accepts only one of --content or --append-content`) — use one or the other
@@ -93,11 +95,12 @@ that stores the issue files, when `mise run watch-status-hooks` is already runni
 Creating an issue in that column does not. The CLI does not start the watcher or invoke hooks
 itself. See `hooks/README.md` in the kanban-lo checkout.
 
-**Frontmatter (`project`, `pr`, `sessionId`)**: an issue file may start with a YAML frontmatter
-block holding these three optional keys. Never edit that block through `--content` or
+**Frontmatter (`project`, `workingDir`, `specLevel`, `pr`, `sessionId`)**: an issue file may
+start with a YAML frontmatter block holding these five optional keys. Never edit that block through `--content` or
 `--append-content` — those only touch the body below the `# Subject` line. Use the dedicated
 flags instead:
-- `--project` / `--pr` / `--session-id <value>` sets or replaces that one key. Keys you don't
+- `--project` / `--working-dir` / `--spec-level` / `--pr` / `--session-id <value>` sets or
+  replaces that one key. Keys you don't
   pass are kept as they are, and so are the subject and content.
 - Pass an empty string (`--pr ""`) to remove a key ("clear the PR", "unassign the session").
 - When setting a project name (not when clearing it with `--project ""`), resolve the name with `list-projects` first (see
@@ -106,8 +109,8 @@ flags instead:
   xxx to yyy") — just set the new value.
 - If one part of a request needs a question (e.g. no matching project), run the parts that
   don't depend on the answer now, report them as done, and ask only about the rest.
-- In `fetch-issue` JSON, the real values are the top-level `project` / `pr` / `sessionId`
-  fields. YAML-looking text inside `content` is just body text.
+- In `fetch-issue` JSON, the real values are the top-level `project` / `workingDir` /
+  `specLevel` / `pr` / `sessionId` fields. YAML-looking text inside `content` is just body text.
 
 Output: the updated issue as JSON (same shape as `fetch-issue`); a removed key is absent.
 
@@ -221,8 +224,8 @@ stderr text.
   output or ask the user for it.
 - Don't pass both `--content` and `--append-content` to `change-issue` — the CLI rejects it; pick
   one based on whether the user wants to replace or add to the content.
-- Don't try to change `project`, `pr`, or `sessionId` by writing YAML into `--content` or
-  `--append-content` — use `--project`, `--pr`, or `--session-id`.
+- Don't try to change frontmatter (`project`, `workingDir`, `specLevel`, `pr`, `sessionId`) by
+  writing YAML into `--content` or `--append-content` — use the matching flag.
 - Don't run `change-issue --content` without confirming the user wants a full replace (see the
   checkpoint above) — it silently discards the existing content.
 - Don't invent a `--subject` for `create-issue` when the user didn't give one — ask instead.

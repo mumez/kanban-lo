@@ -1,5 +1,5 @@
 import * as dav from "../webdavClient";
-import type { Column, IssueFrontmatter } from "../../../web/src/lib/issue-format";
+import { type Column, type IssueFrontmatter, frontmatterOf } from "../../../web/src/lib/issue-format";
 
 export interface ChangeIssueOptions extends IssueFrontmatter {
   id: string;
@@ -9,28 +9,22 @@ export interface ChangeIssueOptions extends IssueFrontmatter {
 }
 
 /**
- * Change an existing issue's content, frontmatter (project / pr / sessionId),
+ * Change an existing issue's content, frontmatter (project / workingDir /
+ * specLevel / pr / sessionId),
  * and/or status. A frontmatter option given as "" removes that key. A status
  * change moves the issue to the top of the destination column's order (see
  * webdavClient.changeIssueStatus).
  */
-export async function changeIssue({
-  id,
-  status,
-  content,
-  appendContent,
-  project,
-  pr,
-  sessionId,
-}: ChangeIssueOptions): Promise<void> {
-  const frontmatterChanges = Object.fromEntries(
-    Object.entries({ project, pr, sessionId }).filter(([, value]) => value !== undefined)
-  ) as IssueFrontmatter;
+export async function changeIssue(options: ChangeIssueOptions): Promise<void> {
+  const { id, status, content, appendContent } = options;
+  const frontmatterChanges: IssueFrontmatter = Object.fromEntries(
+    Object.entries(frontmatterOf(options)).filter(([, value]) => value !== undefined)
+  );
   const hasFrontmatterChanges = Object.keys(frontmatterChanges).length > 0;
 
   if (status === undefined && content === undefined && appendContent === undefined && !hasFrontmatterChanges) {
     throw new Error(
-      "change-issue requires at least one of --status, --content, --append-content, --project, --pr, or --session-id"
+      "change-issue requires at least one of --status, --content, --append-content, --project, --working-dir, --spec-level, --pr, or --session-id"
     );
   }
   if (content !== undefined && appendContent !== undefined) {

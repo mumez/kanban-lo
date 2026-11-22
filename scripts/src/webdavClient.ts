@@ -198,7 +198,7 @@ export async function createIssue(
  */
 export async function updateIssue(
   issue: Issue,
-  changes: Partial<Pick<Issue, "content" | "project" | "pr" | "sessionId">>
+  changes: Partial<Pick<Issue, "content">> & IssueFrontmatter
 ): Promise<Issue> {
   const client = getClient();
   const updated: Issue = { ...issue, ...changes };

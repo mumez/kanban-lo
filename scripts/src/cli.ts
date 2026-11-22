@@ -45,12 +45,14 @@ program
 
 program
   .command("change-issue")
-  .description("Change an issue's status, content, and/or frontmatter (project, pr, sessionId)")
+  .description("Change an issue's status, content, and/or frontmatter (project, workingDir, specLevel, pr, sessionId)")
   .requiredOption("--id <id>", "issue id")
   .addOption(new Option("--status <column>", "move the issue to this column (inserted at the top)").choices(COLUMNS))
   .option("--content <text>", "replace the issue's content")
   .option("--append-content <text>", "append text to the issue's existing content")
   .option("--project <name>", "replace the project (\"\" removes it)")
+  .option("--working-dir <dir>", "replace the working directory (\"\" removes it)")
+  .option("--spec-level <level>", "replace the spec level (\"\" removes it)")
   .option("--pr <url>", "replace the pull request URL (\"\" removes it)")
   .option("--session-id <id>", "replace the agent session id (\"\" removes it)")
   .action((opts) =>
@@ -61,6 +63,8 @@ program
         content: opts.content,
         appendContent: opts.appendContent,
         project: opts.project,
+        workingDir: opts.workingDir,
+        specLevel: opts.specLevel,
         pr: opts.pr,
         sessionId: opts.sessionId,
       })
