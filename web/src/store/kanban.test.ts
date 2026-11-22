@@ -341,6 +341,23 @@ describe("kanbanStore.addIssue / saveIssue project field", () => {
     expect(written.sessionId).toBe("sess-2");
   });
 
+  it("passes workingDir and specLevel through to dav.updateIssue", async () => {
+    await seed([issue("a", "todo")]);
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+
+    await kanbanStore.saveIssue("a", "a", "body", {
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
+    });
+
+    const saved = kanbanStore.issues.find((i) => i.id === "a");
+    expect(saved?.workingDir).toBe("/home/me/repo");
+    expect(saved?.specLevel).toBe("detailed");
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.workingDir).toBe("/home/me/repo");
+    expect(written.specLevel).toBe("detailed");
+  });
+
   it("clears pr and sessionId when a save omits them", async () => {
     await seed([
       {

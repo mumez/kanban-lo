@@ -56,11 +56,13 @@ kanban-lo/
 Body (Markdown supported)
 ```
 
-An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those two from text inputs at the bottom of the form. Blank values are left out of the file.
+An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `workingDir` is the directory the work happens in and `specLevel` is how detailed the spec is. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those four from text inputs at the bottom of the form, with `workingDir` and `specLevel` above `pr` and `sessionId`. Blank values are left out of the file.
 
 ```markdown
 ---
 project: project-a
+workingDir: /path/to/repo
+specLevel: detailed
 pr: https://github.com/org/repo/pull/1
 sessionId: agent-session-id
 ---

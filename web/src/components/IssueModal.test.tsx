@@ -302,6 +302,73 @@ describe("IssueModal", () => {
     expect(written.sessionId).toBeUndefined();
   });
 
+  it("does not show working dir or spec level inputs when creating an issue", () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    expect(screen.queryByLabelText("Working Dir")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Spec Level")).not.toBeInTheDocument();
+  });
+
+  it("shows working dir and spec level inputs above the PR URL when editing", async () => {
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "todo",
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
+    };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    const workingDir = screen.getByLabelText("Working Dir");
+    const specLevel = screen.getByLabelText("Spec Level");
+    expect(workingDir).toHaveValue("/home/me/repo");
+    expect(specLevel).toHaveValue("detailed");
+    expect(follows(workingDir, specLevel)).toBe(true);
+    expect(follows(specLevel, screen.getByLabelText("PR URL"))).toBe(true);
+  });
+
+  it("saves the working dir and spec level entered in the edit form", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "todo" };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByLabelText("Working Dir"), { target: { value: " /home/me/repo " } });
+    fireEvent.input(screen.getByLabelText("Spec Level"), { target: { value: "detailed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.workingDir).toBe("/home/me/repo");
+    expect(written.specLevel).toBe("detailed");
+  });
+
+  it("clears the working dir and spec level when those inputs are left blank", async () => {
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "todo",
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
+    };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByLabelText("Working Dir"), { target: { value: " " } });
+    fireEvent.input(screen.getByLabelText("Spec Level"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
+    expect(written.workingDir).toBeUndefined();
+    expect(written.specLevel).toBeUndefined();
+  });
+
   it("omits columns listed in hiddenStatuses from the column dropdown", async () => {
     vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["reviewing"] });
     await kanbanStore.reload();

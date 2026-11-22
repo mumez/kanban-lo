@@ -54,17 +54,20 @@ describe("visibleColumns", () => {
 });
 
 describe("frontmatterOf", () => {
-  it("picks only project, pr, and sessionId from an issue", () => {
+  it("picks only the frontmatter fields from an issue", () => {
     const issue = {
       id: "abc",
       subject: "Subject",
       content: "body",
       status: "todo" as const,
       project: "project-a",
+      workingDir: "/home/me/repo",
       pr: "https://github.com/org/repo/pull/1",
     };
     expect(frontmatterOf(issue)).toEqual({
       project: "project-a",
+      workingDir: "/home/me/repo",
+      specLevel: undefined,
       pr: "https://github.com/org/repo/pull/1",
       sessionId: undefined,
     });
