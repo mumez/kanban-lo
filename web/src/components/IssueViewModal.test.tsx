@@ -96,10 +96,12 @@ describe("IssueViewModal", () => {
     expect(kanbanStore.viewModal.issue?.content).toBe("Updated **content**");
   });
 
-  it("keeps pr and sessionId when the content is saved", async () => {
+  it("keeps the frontmatter when the content is saved", async () => {
     vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
     await seedAndOpen({
       ...issue,
+      workingDir: "/home/me/repo",
+      specLevel: "detailed",
       pr: "https://github.com/org/repo/pull/3",
       sessionId: "sess-3",
     });
@@ -114,5 +116,7 @@ describe("IssueViewModal", () => {
     expect(written.project).toBe("project-a");
     expect(written.pr).toBe("https://github.com/org/repo/pull/3");
     expect(written.sessionId).toBe("sess-3");
+    expect(written.workingDir).toBe("/home/me/repo");
+    expect(written.specLevel).toBe("detailed");
   });
 });
