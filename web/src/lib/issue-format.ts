@@ -49,6 +49,10 @@ export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
 export interface IssueFrontmatter {
   /** Project classification. Issues without one stay visible under every project filter. */
   project?: string;
+  /** Directory the work on this issue happens in */
+  workingDir?: string;
+  /** How detailed the issue's specification is */
+  specLevel?: string;
   /** Pull request URL */
   pr?: string;
   /** Id of the agent session assigned to this issue */
@@ -57,7 +61,13 @@ export interface IssueFrontmatter {
 
 /** Pick just the frontmatter fields from an issue, e.g. to pass to serializeMarkdown. */
 export function frontmatterOf(issue: IssueFrontmatter): IssueFrontmatter {
-  return { project: issue.project, pr: issue.pr, sessionId: issue.sessionId };
+  return {
+    project: issue.project,
+    workingDir: issue.workingDir,
+    specLevel: issue.specLevel,
+    pr: issue.pr,
+    sessionId: issue.sessionId,
+  };
 }
 
 // Issue type
@@ -76,7 +86,7 @@ export interface Issue extends IssueFrontmatter {
 // Markdown parse / serialize
 // ----------------------------------------------------------------
 
-const FRONTMATTER_KEYS = ["project", "pr", "sessionId"] as const;
+const FRONTMATTER_KEYS = ["project", "workingDir", "specLevel", "pr", "sessionId"] as const;
 
 /** A single-line frontmatter value, or undefined when missing or blank. */
 function singleLine(value: string | undefined): string | undefined {
@@ -90,7 +100,7 @@ function frontmatterValue(frontmatter: string, key: (typeof FRONTMATTER_KEYS)[nu
   return singleLine(match?.[1]);
 }
 
-/** "---\nproject: x\npr: url\nsessionId: id\n---\n# subject\n\ncontent" → parsed issue text */
+/** "---\nproject: x\nworkingDir: dir\nspecLevel: level\npr: url\nsessionId: id\n---\n# subject\n\ncontent" → parsed issue text */
 export function parseMarkdown(
   text: string
 ): { subject: string; content: string } & IssueFrontmatter {
