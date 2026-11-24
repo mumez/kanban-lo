@@ -1,5 +1,5 @@
 import { type Component, Show } from "solid-js";
-import { openableHttpUrl } from "../lib/issue-format";
+import { openableHttpUrl } from "../lib/url";
 
 interface Props {
   pr: string | undefined;

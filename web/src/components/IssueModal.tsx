@@ -2,6 +2,7 @@ import { type Component, createSignal, createEffect, Show, untrack } from "solid
 import { kanbanStore } from "../store/kanban";
 import { COLUMN_LABELS } from "../types";
 import type { Column } from "../types";
+import IssueEditContextFields from "./IssueEditContextFields";
 
 const IssueModal: Component = () => {
   const [subject, setSubject] = createSignal("");
@@ -101,13 +102,11 @@ const IssueModal: Component = () => {
         }}
       >
         <div
-          class="modal-box flex flex-col !overflow-hidden"
-          classList={{
-            "w-full max-w-lg": isCreate(),
-            // Extra edit fields sit beside the body. A wide, tall dialog keeps
-            // the content area from being squeezed by them.
-            "h-[85vh] w-11/12 max-w-6xl": !isCreate(),
-          }}
+          class={
+            isCreate()
+              ? "modal-box flex w-full max-w-lg flex-col !overflow-hidden"
+              : "modal-box flex h-[85vh] w-11/12 max-w-6xl flex-col !overflow-hidden"
+          }
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -124,153 +123,48 @@ const IssueModal: Component = () => {
           </div>
 
           <form onSubmit={handleSubmit} class="flex min-h-0 flex-1 flex-col gap-4">
-            <div
-              class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
-              classList={{
-                "lg:grid lg:grid-cols-[minmax(0,1fr)_26rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden":
-                  !isCreate(),
-              }}
-            >
-              {/* Title */}
-              <div class="form-control" classList={{ "lg:col-span-2": !isCreate() }}>
-                <label class="label">
-                  <span class="label-text font-medium">Title <span class="text-error">*</span></span>
-                </label>
-                <input
-                  type="text"
-                  class="input input-bordered w-full"
-                  placeholder="Enter issue title..."
-                  value={subject()}
-                  onInput={(e) => setSubject(e.currentTarget.value)}
-                  autofocus
-                  required
-                />
-              </div>
-
-              {/* Body. While editing, this fills the space beside the extra fields. */}
-              <div class="form-control" classList={{ "min-h-48 lg:h-full lg:min-h-0": !isCreate() }}>
-                <label class="label shrink-0">
-                  <span class="label-text font-medium">Content</span>
-                  <span class="label-text-alt text-base-content/50">Markdown</span>
-                </label>
-                <textarea
-                  class="textarea textarea-bordered w-full font-mono text-sm"
-                  classList={{ "min-h-48 flex-1 lg:min-h-0": !isCreate() }}
-                  rows={isCreate() ? 5 : 12}
-                  placeholder="Enter details... (Markdown supported)"
-                  value={content()}
-                  onInput={(e) => setContent(e.currentTarget.value)}
-                />
-              </div>
-
-              <div class="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
-                {/* Column select */}
-                <div class="form-control">
-                  <label class="label" classList={{ "py-0": !isCreate() }}>
-                    <span class="label-text font-medium">Column</span>
-                  </label>
-                  <select
-                    class="select select-bordered w-full"
-                    aria-label="Column"
-                    value={targetColumn()}
-                    onChange={(e) => setTargetColumn(e.currentTarget.value as Column)}
-                  >
-                    {kanbanStore.visibleColumns.map((col) => (
-                      <option value={col}>{COLUMN_LABELS[col]}</option>
-                    ))}
-                  </select>
+            <Show
+              when={isCreate()}
+              fallback={
+                <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_26rem] lg:grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden">
+                  <TitleField subject={subject()} onSubject={setSubject} class="lg:col-span-2" />
+                  <ContentField
+                    content={content()}
+                    onContent={setContent}
+                    rows={12}
+                    class="min-h-48 lg:h-full lg:min-h-0"
+                    textareaClass="min-h-48 flex-1 lg:min-h-0"
+                  />
+                  <div class="flex min-h-0 flex-col gap-4 lg:overflow-y-auto">
+                    <ColumnField
+                      targetColumn={targetColumn()}
+                      onTargetColumn={setTargetColumn}
+                      labelClass="label py-0"
+                    />
+                    <ProjectField project={project()} onProject={setProject} labelClass="label py-0" />
+                    <IssueEditContextFields
+                      workingDir={workingDir()}
+                      specLevel={specLevel()}
+                      pr={pr()}
+                      sessionId={sessionId()}
+                      onWorkingDir={setWorkingDir}
+                      onSpecLevel={setSpecLevel}
+                      onPr={setPr}
+                      onSessionId={setSessionId}
+                    />
+                    <FormError />
+                  </div>
                 </div>
-
-                {/* Project select */}
-                <Show when={kanbanStore.projects.length > 0}>
-                  <div class="form-control">
-                    <label class="label" classList={{ "py-0": !isCreate() }}>
-                      <span class="label-text font-medium">Project</span>
-                    </label>
-                    <select
-                      class="select select-bordered w-full"
-                      aria-label="Project"
-                      value={project()}
-                      onChange={(e) => setProject(e.currentTarget.value)}
-                    >
-                      <option value="">(none)</option>
-                      {kanbanStore.projects.map((p) => (
-                        <option value={p}>{p}</option>
-                      ))}
-                    </select>
-                  </div>
-                </Show>
-
-                {/* Optional work context and links, only once the issue exists.
-                    Two columns so they fit beside the content area. */}
-                <Show when={!isCreate()}>
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div class="form-control">
-                      <label class="label py-0" for="issue-working-dir">
-                        <span class="label-text font-medium">Working Dir</span>
-                      </label>
-                      <input
-                        id="issue-working-dir"
-                        type="text"
-                        class="input input-bordered w-full"
-                        placeholder="/path/to/repo"
-                        value={workingDir()}
-                        onInput={(e) => setWorkingDir(e.currentTarget.value)}
-                      />
-                    </div>
-
-                    <div class="form-control">
-                      <label class="label py-0" for="issue-spec-level">
-                        <span class="label-text font-medium">Spec Level</span>
-                      </label>
-                      <input
-                        id="issue-spec-level"
-                        type="text"
-                        class="input input-bordered w-full"
-                        value={specLevel()}
-                        onInput={(e) => setSpecLevel(e.currentTarget.value)}
-                      />
-                    </div>
-
-                    <div class="form-control sm:col-span-2">
-                      <label class="label py-0" for="issue-pr">
-                        <span class="label-text font-medium">PR URL</span>
-                      </label>
-                      <input
-                        id="issue-pr"
-                        type="text"
-                        class="input input-bordered w-full"
-                        placeholder="https://..."
-                        value={pr()}
-                        onInput={(e) => setPr(e.currentTarget.value)}
-                      />
-                    </div>
-
-                    <div class="form-control sm:col-span-2">
-                      <label class="label py-0" for="issue-session-id">
-                        <span class="label-text font-medium">Session ID</span>
-                      </label>
-                      <input
-                        id="issue-session-id"
-                        type="text"
-                        class="input input-bordered w-full"
-                        placeholder="Agent session id"
-                        value={sessionId()}
-                        onInput={(e) => setSessionId(e.currentTarget.value)}
-                      />
-                    </div>
-                  </div>
-                </Show>
-
-                {/* Error display */}
-                <Show when={kanbanStore.error}>
-                  <div class="alert alert-error text-sm">
-                    <span>{kanbanStore.error}</span>
-                  </div>
-                </Show>
+              }
+            >
+              <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+                <TitleField subject={subject()} onSubject={setSubject} />
+                <ContentField content={content()} onContent={setContent} rows={5} />
+                <ColumnField targetColumn={targetColumn()} onTargetColumn={setTargetColumn} />
+                <ProjectField project={project()} onProject={setProject} />
+                <FormError />
               </div>
-
-            </div>
+            </Show>
 
             {/* Action buttons stay in view while the fields scroll */}
             <div class="modal-action mt-0 shrink-0">
@@ -296,5 +190,109 @@ const IssueModal: Component = () => {
     </Show>
   );
 };
+
+function TitleField(props: { subject: string; onSubject: (value: string) => void; class?: string }) {
+  return (
+    <div class={`form-control ${props.class ?? ""}`}>
+      <label class="label">
+        <span class="label-text font-medium">Title <span class="text-error">*</span></span>
+      </label>
+      <input
+        type="text"
+        class="input input-bordered w-full"
+        placeholder="Enter issue title..."
+        value={props.subject}
+        onInput={(e) => props.onSubject(e.currentTarget.value)}
+        autofocus
+        required
+      />
+    </div>
+  );
+}
+
+function ContentField(props: {
+  content: string;
+  onContent: (value: string) => void;
+  rows: number;
+  class?: string;
+  textareaClass?: string;
+}) {
+  return (
+    <div class={`form-control ${props.class ?? ""}`}>
+      <label class="label shrink-0">
+        <span class="label-text font-medium">Content</span>
+        <span class="label-text-alt text-base-content/50">Markdown</span>
+      </label>
+      <textarea
+        class={`textarea textarea-bordered w-full font-mono text-sm ${props.textareaClass ?? ""}`}
+        rows={props.rows}
+        placeholder="Enter details... (Markdown supported)"
+        value={props.content}
+        onInput={(e) => props.onContent(e.currentTarget.value)}
+      />
+    </div>
+  );
+}
+
+function ColumnField(props: {
+  targetColumn: Column;
+  onTargetColumn: (column: Column) => void;
+  labelClass?: string;
+}) {
+  return (
+    <div class="form-control">
+      <label class={props.labelClass ?? "label"}>
+        <span class="label-text font-medium">Column</span>
+      </label>
+      <select
+        class="select select-bordered w-full"
+        aria-label="Column"
+        value={props.targetColumn}
+        onChange={(e) => props.onTargetColumn(e.currentTarget.value as Column)}
+      >
+        {kanbanStore.visibleColumns.map((col) => (
+          <option value={col}>{COLUMN_LABELS[col]}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ProjectField(props: {
+  project: string;
+  onProject: (project: string) => void;
+  labelClass?: string;
+}) {
+  return (
+    <Show when={kanbanStore.projects.length > 0}>
+      <div class="form-control">
+        <label class={props.labelClass ?? "label"}>
+          <span class="label-text font-medium">Project</span>
+        </label>
+        <select
+          class="select select-bordered w-full"
+          aria-label="Project"
+          value={props.project}
+          onChange={(e) => props.onProject(e.currentTarget.value)}
+        >
+          <option value="">(none)</option>
+          {kanbanStore.projects.map((p) => (
+            <option value={p}>{p}</option>
+          ))}
+        </select>
+      </div>
+    </Show>
+  );
+}
+
+function FormError() {
+  return (
+    <Show when={kanbanStore.error}>
+      <div class="alert alert-error text-sm">
+        <span>{kanbanStore.error}</span>
+      </div>
+    </Show>
+  );
+}
 
 export default IssueModal;
