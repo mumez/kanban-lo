@@ -3,6 +3,7 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { kanbanStore } from "../store/kanban";
 import { frontmatterOf } from "../lib/issue-format";
+import { openableHttpUrl } from "../lib/url";
 import IssuePrLink from "./IssuePrLink";
 
 const IssueViewModal: Component = () => {
@@ -56,13 +57,14 @@ const IssueViewModal: Component = () => {
             <div class="flex items-start justify-between mb-4">
               <div>
                 <h3 class="font-bold text-2xl">{issue().subject}</h3>
-                <Show when={issue().project}>
-                  <span class="badge badge-ghost badge-sm mt-2">{issue().project}</span>
+                <Show when={issue().project || openableHttpUrl(issue().pr)}>
+                  <div class="mt-2 flex min-w-0 items-center gap-1.5">
+                    <Show when={issue().project}>
+                      <span class="badge badge-ghost badge-sm min-w-0 truncate">{issue().project}</span>
+                    </Show>
+                    <IssuePrLink pr={issue().pr} />
+                  </div>
                 </Show>
-                <IssuePrLink
-                  pr={issue().pr}
-                  class="link link-primary mt-2 block break-all text-sm"
-                />
               </div>
               <button
                 class="btn btn-ghost btn-sm btn-circle"

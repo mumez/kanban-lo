@@ -15,6 +15,13 @@ const issue: Issue = {
   status: "todo",
 };
 
+/** Text a sighted user sees. The URL stays in a screen-reader-only label. */
+function visibleLabel(link: HTMLElement): string {
+  const clone = link.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(".sr-only").forEach((node) => node.remove());
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
 // createSortable() requires a surrounding DragDropProvider + SortableProvider context.
 function renderCard(cardIssue: Issue) {
   return render(() => (
@@ -48,6 +55,21 @@ describe("IssueCard", () => {
     expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAttribute("title", "https://github.com/org/repo/pull/12");
+    expect(visibleLabel(link)).toBe("PR");
+  });
+
+  it("places the pull request button to the right of the project name", () => {
+    renderCard({
+      ...issue,
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/12",
+    });
+
+    const project = screen.getByText("project-a");
+    const link = screen.getByRole("link", { name: /pull request/i });
+    expect(project.parentElement).toBe(link.parentElement);
+    expect(project.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("does not show a pull request link when the issue has none", () => {

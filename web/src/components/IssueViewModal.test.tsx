@@ -15,6 +15,13 @@ const issue: Issue = {
   project: "project-a",
 };
 
+/** Text a sighted user sees. The URL stays in a screen-reader-only label. */
+function visibleLabel(link: HTMLElement): string {
+  const clone = link.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(".sr-only").forEach((node) => node.remove());
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
 /** saveIssue only acts on issues already present in the store, so the edit
  *  test must seed the store before opening the view modal. */
 async function seedAndOpen(seedIssue: Issue) {
@@ -95,6 +102,12 @@ describe("IssueViewModal", () => {
     expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAttribute("title", "https://github.com/org/repo/pull/12");
+    expect(visibleLabel(link)).toBe("PR");
+
+    const project = screen.getByText("project-a");
+    expect(project.parentElement).toBe(link.parentElement);
+    expect(project.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("does not show a pull request link when the issue has none", () => {
