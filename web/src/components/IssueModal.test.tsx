@@ -369,6 +369,62 @@ describe("IssueModal", () => {
     expect(written.specLevel).toBeUndefined();
   });
 
+  it("closes the create dialog when the backdrop is clicked", () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    fireEvent.click(document.querySelector(".modal")!);
+
+    expect(kanbanStore.modal.open).toBe(false);
+  });
+
+  it("keeps the create dialog at the compact width", () => {
+    kanbanStore.openCreateModal("todo");
+    render(() => <IssueModal />);
+
+    const box = document.querySelector(".modal-box") as HTMLElement;
+    expect(box.className).toContain("max-w-lg");
+    expect(box.className).not.toContain("max-w-6xl");
+    expect(screen.getByPlaceholderText(/Enter details/)).toHaveAttribute("rows", "5");
+  });
+
+  it("gives the edit dialog a wide content area", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    const box = document.querySelector(".modal-box") as HTMLElement;
+    expect(box.className).toContain("max-w-6xl");
+    expect(box.className).toContain("h-[85vh]");
+    const content = screen.getByPlaceholderText(/Enter details/);
+    expect(content).toHaveAttribute("rows", "12");
+    expect(content.className).toContain("flex-1");
+  });
+
+  it("does not close the edit dialog when the backdrop is clicked", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.input(screen.getByPlaceholderText("Enter issue title..."), {
+      target: { value: "Unsaved title" },
+    });
+    fireEvent.click(document.querySelector(".modal")!);
+
+    expect(kanbanStore.modal.open).toBe(true);
+    expect(screen.getByPlaceholderText("Enter issue title...")).toHaveValue("Unsaved title");
+  });
+
+  it("still closes the edit dialog from Cancel", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "working" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(kanbanStore.modal.open).toBe(false);
+  });
+
   it("omits columns listed in hiddenStatuses from the column dropdown", async () => {
     vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: ["reviewing"] });
     await kanbanStore.reload();

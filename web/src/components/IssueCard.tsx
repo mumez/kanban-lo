@@ -2,6 +2,7 @@ import { type Component, Show } from "solid-js";
 import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
 import { kanbanStore } from "../store/kanban";
+import IssuePrLink from "./IssuePrLink";
 
 interface Props {
   issue: Issue;
@@ -26,6 +27,11 @@ const IssueCard: Component<Props> = (props) => {
         <Show when={props.issue.project}>
           <span class="badge badge-ghost badge-sm self-start">{props.issue.project}</span>
         </Show>
+
+        <IssuePrLink
+          pr={props.issue.pr}
+          class="link link-primary block max-w-full truncate text-xs"
+        />
 
         {/* Body preview */}
         <Show when={props.issue.content}>

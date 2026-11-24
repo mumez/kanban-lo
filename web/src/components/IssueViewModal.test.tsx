@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@solidjs/testing-library";
+import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
 import IssueViewModal from "./IssueViewModal";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
@@ -60,6 +60,48 @@ describe("IssueViewModal", () => {
     screen.getByText("Close").click();
 
     expect(kanbanStore.viewModal.open).toBe(false);
+  });
+
+  it("closes when the backdrop is clicked while reading", () => {
+    kanbanStore.openViewModal(issue);
+    render(() => <IssueViewModal />);
+
+    fireEvent.click(document.querySelector(".modal")!);
+
+    expect(kanbanStore.viewModal.open).toBe(false);
+  });
+
+  it("does not close when the backdrop is clicked while editing", async () => {
+    kanbanStore.openViewModal(issue);
+    const { container } = render(() => <IssueViewModal />);
+
+    screen.getByText("Edit").click();
+    await waitFor(() => expect(screen.getByRole("textbox")).toBeInTheDocument());
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    textarea.value = "Unsaved draft";
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+    fireEvent.click(document.querySelector(".modal")!);
+
+    expect(kanbanStore.viewModal.open).toBe(true);
+    expect(textarea.value).toBe("Unsaved draft");
+  });
+
+  it("links the pull request in a new tab when a PR URL is set", () => {
+    kanbanStore.openViewModal({ ...issue, pr: "https://github.com/org/repo/pull/12" });
+    render(() => <IssueViewModal />);
+
+    const link = screen.getByRole("link", { name: /github\.com\/org\/repo\/pull\/12/ });
+    expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("does not show a pull request link when the issue has none", () => {
+    kanbanStore.openViewModal(issue);
+    render(() => <IssueViewModal />);
+
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("toggles into edit mode showing the raw Markdown in a textarea", async () => {
