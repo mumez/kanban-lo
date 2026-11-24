@@ -41,6 +41,25 @@ describe("IssueCard", () => {
     expect(screen.getByText("Details here")).toBeInTheDocument();
   });
 
+  it("links the pull request in a new tab when a PR URL is set", () => {
+    renderCard({ ...issue, pr: "https://github.com/org/repo/pull/12" });
+
+    const link = screen.getByRole("link", { name: /github\.com\/org\/repo\/pull\/12/ });
+    expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("does not show a pull request link when the issue has none", () => {
+    renderCard(issue);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("does not link a pull request value that is not an http URL", () => {
+    renderCard({ ...issue, pr: "javascript:alert(1)" });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("copies the issue id to the clipboard when Copy ID is clicked", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
