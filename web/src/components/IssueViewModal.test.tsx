@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
 import IssueViewModal from "./IssueViewModal";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
+import { visibleLabel } from "../test/visible-label";
 import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
@@ -14,13 +15,6 @@ const issue: Issue = {
   status: "todo",
   project: "project-a",
 };
-
-/** Text a sighted user sees. The URL stays in a screen-reader-only label. */
-function visibleLabel(link: HTMLElement): string {
-  const clone = link.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll(".sr-only").forEach((node) => node.remove());
-  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
-}
 
 /** saveIssue only acts on issues already present in the store, so the edit
  *  test must seed the store before opening the view modal. */

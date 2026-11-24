@@ -4,6 +4,7 @@ import { DragDropProvider, DragDropSensors, SortableProvider } from "@thisbeyond
 import IssueCard from "./IssueCard";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
+import { visibleLabel } from "../test/visible-label";
 import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
@@ -14,13 +15,6 @@ const issue: Issue = {
   content: "Details here",
   status: "todo",
 };
-
-/** Text a sighted user sees. The URL stays in a screen-reader-only label. */
-function visibleLabel(link: HTMLElement): string {
-  const clone = link.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll(".sr-only").forEach((node) => node.remove());
-  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
-}
 
 // createSortable() requires a surrounding DragDropProvider + SortableProvider context.
 function renderCard(cardIssue: Issue) {

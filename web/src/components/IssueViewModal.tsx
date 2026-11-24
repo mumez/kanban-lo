@@ -3,8 +3,7 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { kanbanStore } from "../store/kanban";
 import { frontmatterOf } from "../lib/issue-format";
-import { openableHttpUrl } from "../lib/url";
-import IssuePrLink from "./IssuePrLink";
+import IssueProjectRow from "./IssueProjectRow";
 
 const IssueViewModal: Component = () => {
   const [editing, setEditing] = createSignal(false);
@@ -57,14 +56,7 @@ const IssueViewModal: Component = () => {
             <div class="flex items-start justify-between mb-4">
               <div>
                 <h3 class="font-bold text-2xl">{issue().subject}</h3>
-                <Show when={issue().project || openableHttpUrl(issue().pr)}>
-                  <div class="mt-2 flex min-w-0 items-center gap-1.5">
-                    <Show when={issue().project}>
-                      <span class="badge badge-ghost badge-sm min-w-0 truncate">{issue().project}</span>
-                    </Show>
-                    <IssuePrLink pr={issue().pr} />
-                  </div>
-                </Show>
+                <IssueProjectRow class="mt-2" project={issue().project} pr={issue().pr} />
               </div>
               <button
                 class="btn btn-ghost btn-sm btn-circle"

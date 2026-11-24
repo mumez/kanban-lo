@@ -1,9 +1,8 @@
 import { type Component, Show } from "solid-js";
 import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
-import { openableHttpUrl } from "../lib/url";
 import { kanbanStore } from "../store/kanban";
-import IssuePrLink from "./IssuePrLink";
+import IssueProjectRow from "./IssueProjectRow";
 
 interface Props {
   issue: Issue;
@@ -24,15 +23,7 @@ const IssueCard: Component<Props> = (props) => {
           {props.issue.subject}
         </h3>
 
-        {/* Project badge, with the pull-request button on its right */}
-        <Show when={props.issue.project || openableHttpUrl(props.issue.pr)}>
-          <div class="flex min-w-0 items-center gap-1.5">
-            <Show when={props.issue.project}>
-              <span class="badge badge-ghost badge-sm min-w-0 truncate">{props.issue.project}</span>
-            </Show>
-            <IssuePrLink pr={props.issue.pr} />
-          </div>
-        </Show>
+        <IssueProjectRow project={props.issue.project} pr={props.issue.pr} />
 
         {/* Body preview */}
         <Show when={props.issue.content}>
