@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@solidjs/testing-library";
 import IssueViewModal from "./IssueViewModal";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
+import { visibleLabel } from "../test/visible-label";
 import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
@@ -95,6 +96,12 @@ describe("IssueViewModal", () => {
     expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAttribute("title", "https://github.com/org/repo/pull/12");
+    expect(visibleLabel(link)).toBe("PR");
+
+    const project = screen.getByText("project-a");
+    expect(project.parentElement).toBe(link.parentElement);
+    expect(project.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("does not show a pull request link when the issue has none", () => {
