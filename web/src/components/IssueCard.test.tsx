@@ -4,6 +4,7 @@ import { DragDropProvider, DragDropSensors, SortableProvider } from "@thisbeyond
 import IssueCard from "./IssueCard";
 import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
+import { visibleLabel } from "../test/visible-label";
 import type { Issue } from "../types";
 
 vi.mock("../services/webdav");
@@ -39,6 +40,40 @@ describe("IssueCard", () => {
     renderCard(issue);
     expect(screen.getByText("Fix bug")).toBeInTheDocument();
     expect(screen.getByText("Details here")).toBeInTheDocument();
+  });
+
+  it("links the pull request in a new tab when a PR URL is set", () => {
+    renderCard({ ...issue, pr: "https://github.com/org/repo/pull/12" });
+
+    const link = screen.getByRole("link", { name: /github\.com\/org\/repo\/pull\/12/ });
+    expect(link).toHaveAttribute("href", "https://github.com/org/repo/pull/12");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAttribute("title", "https://github.com/org/repo/pull/12");
+    expect(visibleLabel(link)).toBe("PR");
+  });
+
+  it("places the pull request button to the right of the project name", () => {
+    renderCard({
+      ...issue,
+      project: "project-a",
+      pr: "https://github.com/org/repo/pull/12",
+    });
+
+    const project = screen.getByText("project-a");
+    const link = screen.getByRole("link", { name: /pull request/i });
+    expect(project.parentElement).toBe(link.parentElement);
+    expect(project.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("does not show a pull request link when the issue has none", () => {
+    renderCard(issue);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("does not link a pull request value that is not an http URL", () => {
+    renderCard({ ...issue, pr: "javascript:alert(1)" });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("copies the issue id to the clipboard when Copy ID is clicked", () => {

@@ -3,6 +3,7 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { kanbanStore } from "../store/kanban";
 import { frontmatterOf } from "../lib/issue-format";
+import IssueProjectRow from "./IssueProjectRow";
 
 const IssueViewModal: Component = () => {
   const [editing, setEditing] = createSignal(false);
@@ -42,7 +43,9 @@ const IssueViewModal: Component = () => {
         <div
           class="modal modal-open"
           onClick={(e) => {
-            if (e.target === e.currentTarget) kanbanStore.closeViewModal();
+            // Reading can be dismissed from the backdrop. Editing cannot, so a
+            // click outside the box does not throw away unsaved content.
+            if (e.target === e.currentTarget && !editing()) kanbanStore.closeViewModal();
           }}
         >
           <div
@@ -53,9 +56,7 @@ const IssueViewModal: Component = () => {
             <div class="flex items-start justify-between mb-4">
               <div>
                 <h3 class="font-bold text-2xl">{issue().subject}</h3>
-                <Show when={issue().project}>
-                  <span class="badge badge-ghost badge-sm mt-2">{issue().project}</span>
-                </Show>
+                <IssueProjectRow class="mt-2" project={issue().project} pr={issue().pr} />
               </div>
               <button
                 class="btn btn-ghost btn-sm btn-circle"
