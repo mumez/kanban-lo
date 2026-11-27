@@ -23,6 +23,7 @@ describe("IssueModal", () => {
     vi.mocked(dav.loadAllIssues).mockResolvedValue([]);
     vi.mocked(dav.loadProjects).mockResolvedValue([]);
     vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: [] });
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue(null);
     await kanbanStore.reload();
   });
 
@@ -344,6 +345,94 @@ describe("IssueModal", () => {
     const written = vi.mocked(dav.updateIssue).mock.calls[0][0];
     expect(written.workingDir).toBe("/home/me/repo");
     expect(written.specLevel).toBe("detailed");
+  });
+
+  it("uses a text input for spec level when no choice list is loaded", async () => {
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "todo" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    expect(screen.getByLabelText("Spec Level").tagName).toBe("INPUT");
+  });
+
+  it("offers the loaded spec levels as a dropdown, including a blank choice", async () => {
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue(["", "memo", "refining", "clear"]);
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "todo",
+      specLevel: "memo",
+    };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    const specLevel = screen.getByLabelText("Spec Level");
+    expect(specLevel.tagName).toBe("SELECT");
+    expect(specLevel).toHaveValue("memo");
+    expect(screen.getByRole("option", { name: "(none)" })).toHaveValue("");
+    expect(screen.getByRole("option", { name: "memo" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "refining" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "clear" })).toBeInTheDocument();
+  });
+
+  it("keeps a dropdown when the choice list is empty", async () => {
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue([]);
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "todo" };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    expect(screen.getByLabelText("Spec Level").tagName).toBe("SELECT");
+  });
+
+  it("keeps a saved spec level that is not in the choice list", async () => {
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue(["", "memo", "refining", "clear"]);
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "todo",
+      specLevel: "detailed",
+    };
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    expect(screen.getByLabelText("Spec Level")).toHaveValue("detailed");
+    expect(screen.getByRole("option", { name: "detailed" })).toBeInTheDocument();
+  });
+
+  it("saves a spec level chosen from the dropdown", async () => {
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue(["", "memo", "refining", "clear"]);
+    const issue: Issue = { id: "1", subject: "Existing", content: "Body", status: "todo" };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.change(screen.getByLabelText("Spec Level"), { target: { value: "refining" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    expect(vi.mocked(dav.updateIssue).mock.calls[0][0].specLevel).toBe("refining");
+  });
+
+  it("clears the spec level when the blank dropdown choice is selected", async () => {
+    vi.mocked(dav.loadSpecLevels).mockResolvedValue(["", "memo", "refining", "clear"]);
+    const issue: Issue = {
+      id: "1",
+      subject: "Existing",
+      content: "Body",
+      status: "todo",
+      specLevel: "memo",
+    };
+    vi.mocked(dav.updateIssue).mockResolvedValue(undefined);
+    await seedAndEdit(issue);
+    render(() => <IssueModal />);
+
+    fireEvent.change(screen.getByLabelText("Spec Level"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(dav.updateIssue).toHaveBeenCalled());
+    expect(vi.mocked(dav.updateIssue).mock.calls[0][0].specLevel).toBeUndefined();
   });
 
   it("clears the working dir and spec level when those inputs are left blank", async () => {

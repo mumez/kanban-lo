@@ -81,6 +81,12 @@ describe("webdav service (integration)", () => {
     expect(Array.isArray(projects)).toBe(true);
   });
 
+  it("loads spec level choices from _specLevels.json", async () => {
+    const levels = await dav.loadSpecLevels();
+    expect(Array.isArray(levels)).toBe(true);
+    expect(levels).toContain("memo");
+  });
+
   it("aggregates issues from every column via loadAllIssues", async () => {
     const inTodo = await dav.createIssue("todo", `Integration todo ${Date.now()}`, "");
     cleanup.push({ column: "todo", id: inTodo.id });

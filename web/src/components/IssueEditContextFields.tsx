@@ -1,14 +1,28 @@
-import { type Component } from "solid-js";
+import { type Component, Show } from "solid-js";
 
 interface Props {
   workingDir: string;
   specLevel: string;
+  /** Choices from issues/_specLevels.json. null means free-text entry. */
+  specLevels: string[] | null;
   pr: string;
   sessionId: string;
   onWorkingDir: (value: string) => void;
   onSpecLevel: (value: string) => void;
   onPr: (value: string) => void;
   onSessionId: (value: string) => void;
+}
+
+/**
+ * Dropdown choices. A saved level the file does not list is appended so the
+ * select shows the value that will actually be saved.
+ */
+function specLevelOptions(levels: readonly string[], current: string): string[] {
+  return levels.includes(current) ? [...levels] : [...levels, current];
+}
+
+function specLevelLabel(level: string): string {
+  return level === "" ? "(none)" : level;
 }
 
 /**
@@ -36,13 +50,29 @@ const IssueEditContextFields: Component<Props> = (props) => {
         <label class="label py-0" for="issue-spec-level">
           <span class="label-text font-medium">Spec Level</span>
         </label>
-        <input
-          id="issue-spec-level"
-          type="text"
-          class="input input-bordered w-full"
-          value={props.specLevel}
-          onInput={(e) => props.onSpecLevel(e.currentTarget.value)}
-        />
+        <Show
+          when={props.specLevels !== null}
+          fallback={
+            <input
+              id="issue-spec-level"
+              type="text"
+              class="input input-bordered w-full"
+              value={props.specLevel}
+              onInput={(e) => props.onSpecLevel(e.currentTarget.value)}
+            />
+          }
+        >
+          <select
+            id="issue-spec-level"
+            class="select select-bordered w-full"
+            value={props.specLevel}
+            onChange={(e) => props.onSpecLevel(e.currentTarget.value)}
+          >
+            {specLevelOptions(props.specLevels ?? [], props.specLevel).map((level) => (
+              <option value={level}>{specLevelLabel(level)}</option>
+            ))}
+          </select>
+        </Show>
       </div>
 
       <div class="form-control sm:col-span-2">

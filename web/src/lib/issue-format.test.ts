@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { COLUMNS, frontmatterOf, parseSettings, visibleColumns } from "./issue-format";
+import { COLUMNS, frontmatterOf, parseSettings, parseSpecLevels, visibleColumns } from "./issue-format";
 
 describe("parseSettings", () => {
   it("hides nothing when hiddenStatuses is missing", () => {
@@ -50,6 +53,33 @@ describe("visibleColumns", () => {
 
   it("ignores names that are not columns", () => {
     expect(visibleColumns(["nope"])).toEqual(COLUMNS);
+  });
+});
+
+describe("parseSpecLevels", () => {
+  it("reads the shipped choice list, keeping the blank entry", () => {
+    const shipped = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../../issues/_specLevels.json"),
+      "utf8"
+    );
+    expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", "clear"]);
+  });
+
+  it("trims entries and drops non-strings and duplicates", () => {
+    expect(parseSpecLevels('[" memo ", 1, null, "memo", "  ", "clear"]')).toEqual([
+      "memo",
+      "",
+      "clear",
+    ]);
+  });
+
+  it("returns no choices when the document is not an array", () => {
+    expect(parseSpecLevels("{}")).toEqual([]);
+    expect(parseSpecLevels("null")).toEqual([]);
+  });
+
+  it("throws when the JSON is invalid", () => {
+    expect(() => parseSpecLevels("{")).toThrow();
   });
 });
 
