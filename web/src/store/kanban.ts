@@ -14,18 +14,27 @@ const [issues, setIssues] = createStore<Issue[]>([]);
 /** Columns omitted from the Web UI, from issues/_settings.json. Empty shows every column. */
 const [hiddenStatuses, setHiddenStatuses] = createSignal<Column[]>([]);
 
-/** Reload issues, the project list, and board settings from WebDAV */
+/**
+ * Spec-level choices from issues/_specLevels.json.
+ * null when the file is absent — the edit field stays free text.
+ */
+const [specLevels, setSpecLevels] = createSignal<string[] | null>(null);
+
+/** Reload issues, the project list, board settings, and spec levels from WebDAV */
 async function reload() {
-  const [all, projectList, settings] = await Promise.all([
+  const [all, projectList, settings, levels] = await Promise.all([
     dav.loadAllIssues(),
     dav.loadProjects(),
     dav.loadSettings(),
+    dav.loadSpecLevels(),
   ]);
   setIssues(all);
   const list = Array.isArray(projectList) ? projectList : [];
   setProjects(list);
   // parseSettings already drops unknown names. A missing file is an empty list.
   setHiddenStatuses(settings?.hiddenStatuses ?? []);
+  // Only an array means the file was present. Anything else keeps free-text entry.
+  setSpecLevels(Array.isArray(levels) ? levels : null);
   const selected = selectedProject();
   if (selected !== null && !list.includes(selected)) {
     setSelectedProject(null);
@@ -330,6 +339,9 @@ export const kanbanStore = {
   },
   get projects() {
     return projects();
+  },
+  get specLevels() {
+    return specLevels();
   },
   get selectedProject() {
     return selectedProject();

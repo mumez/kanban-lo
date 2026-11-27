@@ -77,7 +77,7 @@ mise run change-issue -- --id <id> [--status <column>] [--content <text>] [--app
 | `--append-content` | no | appends text to the existing content, after a blank line (the CLI adds it — don't add your own) |
 | `--project` | no | replaces the issue's `project` frontmatter value |
 | `--working-dir` | no | replaces the issue's `workingDir` (directory the work happens in) frontmatter value |
-| `--spec-level` | no | replaces the issue's `specLevel` (how detailed the spec is) frontmatter value |
+| `--spec-level` | no | replaces the issue's `specLevel` (how detailed the spec is) frontmatter value. The Web UI lists choices from `issues/_specLevels.json` when that file exists; `kbl` does not read it |
 | `--pr` | no | replaces the issue's `pr` (pull request URL) frontmatter value |
 | `--session-id` | no | replaces the issue's `sessionId` (agent session id) frontmatter value |
 
@@ -103,6 +103,7 @@ flags instead:
   replaces that one key. Keys you don't
   pass are kept as they are, and so are the subject and content.
 - Pass an empty string (`--pr ""`) to remove a key ("clear the PR", "unassign the session").
+- The Web UI's edit form lists spec levels from `issues/_specLevels.json` when that file exists (shipped default: `""`, `memo`, `refining`, `clear`; `""` clears the level). Deleting the file makes that field free text. `kbl` does not read the file; pass whatever string the user asked for.
 - When setting a project name (not when clearing it with `--project ""`), resolve the name with `list-projects` first (see
   [project name matching](#project-name-matching)). The CLI doesn't validate it.
 - No need to `fetch-issue` first, even when the user names the old value ("change project from

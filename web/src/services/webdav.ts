@@ -10,8 +10,10 @@ import {
   generateId,
   sortByOrder,
   parseSettings,
+  parseSpecLevels,
   ORDER_FILENAME,
   SETTINGS_FILENAME,
+  SPEC_LEVELS_FILENAME,
 } from "../lib/issue-format";
 import { rethrowUnlessNotFound } from "../lib/webdav-errors";
 
@@ -235,5 +237,24 @@ export async function loadProjects(): Promise<string[]> {
   } catch (err) {
     rethrowUnlessNotFound(err);
     return [];
+  }
+}
+
+/**
+ * Load spec-level choices from issues/_specLevels.json.
+ * null when the file is absent — the edit form then uses a free-text field.
+ * An empty array means the file exists and the dropdown has no choices.
+ * Invalid JSON and any non-404 failure are thrown.
+ */
+export async function loadSpecLevels(): Promise<string[] | null> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents(`/${SPEC_LEVELS_FILENAME}`, {
+      format: "text",
+    })) as string;
+    return parseSpecLevels(text);
+  } catch (err) {
+    rethrowUnlessNotFound(err);
+    return null;
   }
 }

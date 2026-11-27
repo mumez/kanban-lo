@@ -45,6 +45,33 @@ export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
   return COLUMNS.filter((column) => !hidden.has(column));
 }
 
+// ----------------------------------------------------------------
+// Spec level choices (issues/_specLevels.json)
+// ----------------------------------------------------------------
+
+export const SPEC_LEVELS_FILENAME = "_specLevels.json";
+
+/**
+ * Parse `issues/_specLevels.json`, a JSON array of spec-level names for the
+ * edit dropdown. An empty string is kept: it is the blank choice. Entries
+ * are trimmed, non-strings are ignored, and duplicates are dropped. A
+ * non-array document means no choices. Invalid JSON throws. A missing file
+ * is not this function's concern — that means free-text entry.
+ */
+export function parseSpecLevels(text: string): string[] {
+  const parsed: unknown = JSON.parse(text);
+  if (!Array.isArray(parsed)) return [];
+
+  const levels: string[] = [];
+  for (const entry of parsed) {
+    if (typeof entry !== "string") continue;
+    const level = entry.trim();
+    if (levels.includes(level)) continue;
+    levels.push(level);
+  }
+  return levels;
+}
+
 /**
  * Optional YAML frontmatter keys, in the order they are written. The single
  * source for the IssueFrontmatter type, frontmatterOf, and parse/serialize.

@@ -29,6 +29,8 @@ Run `npx tsx src/cli.ts <subcommand> --help` for a subcommand's full option list
 
 The Web UI can hide a status with `issues/_settings.json` (`"hiddenStatuses": ["reviewing"]`). `kbl` does not read that file; every status above stays valid.
 
+The Web UI's edit form lists spec levels from `issues/_specLevels.json` when that file exists (shipped default: `""`, `memo`, `refining`, `clear`). `kbl` does not read it; `--spec-level` still accepts any string. Delete the file to make that field free text in the Web UI.
+
 ### Examples
 
 ```bash

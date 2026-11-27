@@ -9,10 +9,16 @@ function issue(id: string, status: Issue["status"]): Issue {
   return { id, subject: id, content: "", status };
 }
 
-async function seed(issues: Issue[], projects: string[] = [], hiddenStatuses: Issue["status"][] = []) {
+async function seed(
+  issues: Issue[],
+  projects: string[] = [],
+  hiddenStatuses: Issue["status"][] = [],
+  specLevels: string[] | null = null
+) {
   vi.mocked(dav.loadAllIssues).mockResolvedValue(issues);
   vi.mocked(dav.loadProjects).mockResolvedValue(projects);
   vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses });
+  vi.mocked(dav.loadSpecLevels).mockResolvedValue(specLevels);
   await kanbanStore.reload();
 }
 
@@ -57,6 +63,30 @@ describe("kanbanStore.visibleColumns", () => {
     await seed([], [], ["todo", "working", "reviewing", "releasing", "done", "pending"]);
 
     expect(kanbanStore.defaultCreateColumn).toBe("todo");
+  });
+});
+
+describe("kanbanStore.specLevels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("stays null when _specLevels.json is absent, so the edit field stays free text", async () => {
+    await seed([]);
+
+    expect(kanbanStore.specLevels).toBeNull();
+  });
+
+  it("keeps an empty list, which is still a dropdown rather than free text", async () => {
+    await seed([], [], [], []);
+
+    expect(kanbanStore.specLevels).toEqual([]);
+  });
+
+  it("stores the choice list loaded from WebDAV", async () => {
+    await seed([], [], [], ["", "memo", "refining", "clear"]);
+
+    expect(kanbanStore.specLevels).toEqual(["", "memo", "refining", "clear"]);
   });
 });
 

@@ -145,6 +145,7 @@ const IssueModal: Component = () => {
                     <IssueEditContextFields
                       workingDir={workingDir()}
                       specLevel={specLevel()}
+                      specLevels={kanbanStore.specLevels}
                       pr={pr()}
                       sessionId={sessionId()}
                       onWorkingDir={setWorkingDir}

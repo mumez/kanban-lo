@@ -281,6 +281,42 @@ describe("not-found handling", () => {
     await expect(dav.loadSettings()).rejects.toThrow("Failed to fetch");
   });
 
+  it("treats a missing _specLevels.json as free-text entry", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(httpError(404));
+
+    expect(await dav.loadSpecLevels()).toBeNull();
+  });
+
+  it("reads spec level choices from _specLevels.json", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockResolvedValue('["", " memo ", 1, "memo", "refining", "clear"]');
+
+    expect(await dav.loadSpecLevels()).toEqual(["", "memo", "refining", "clear"]);
+    expect(client.getFileContents).toHaveBeenCalledWith("/_specLevels.json", { format: "text" });
+  });
+
+  it("treats a non-array spec level document as a dropdown with no choices", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockResolvedValue('{"levels":["memo"]}');
+
+    expect(await dav.loadSpecLevels()).toEqual([]);
+  });
+
+  it("rethrows invalid spec level JSON", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockResolvedValue("{");
+
+    await expect(dav.loadSpecLevels()).rejects.toThrow();
+  });
+
+  it("rethrows a non-404 failure when loading spec levels", async () => {
+    const dav = await loadWebdavService();
+    client.getFileContents.mockRejectedValue(new Error("Failed to fetch"));
+
+    await expect(dav.loadSpecLevels()).rejects.toThrow("Failed to fetch");
+  });
+
   it("treats a missing _order.json as no saved order", async () => {
     const dav = await loadWebdavService();
     client.getFileContents.mockRejectedValue(httpError(404));

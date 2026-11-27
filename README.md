@@ -57,7 +57,7 @@ kanban-lo/
 Body (Markdown supported)
 ```
 
-An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `workingDir` is the directory the work happens in and `specLevel` is how detailed the spec is. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those four from text inputs at the bottom of the form, with `workingDir` and `specLevel` above `pr` and `sessionId`. Blank values are left out of the file.
+An issue may start with an optional YAML frontmatter block. `project` classifies the issue. `workingDir` is the directory the work happens in and `specLevel` is how detailed the spec is. `pr` is a pull request URL and `sessionId` is an agent session id. The edit modal sets those four at the bottom of the form, with `workingDir` and `specLevel` above `pr` and `sessionId`. `specLevel` is a dropdown when `issues/_specLevels.json` is present and a text input when that file is absent. Blank values are left out of the file.
 
 ```markdown
 ---
@@ -82,6 +82,14 @@ Moving a file between column directories changes its status.
 ```
 
 The file is admin-maintained; the Web UI reads it and does not write it. With no file, or without `hiddenStatuses`, every column is shown. The `kbl` CLI ignores this file and still accepts every status.
+
+The edit form's Spec Level field lists the choices in `issues/_specLevels.json` (a JSON array of strings). The shipped file is:
+
+```json
+["", "memo", "refining", "clear"]
+```
+
+`""` is the blank choice, shown as "(none)". The Web UI only reads this file. Delete it to type a spec level freely. `kbl` does not read it, so `--spec-level` still accepts any string.
 
 Card order within a column is optional: dragging cards writes it to `issues/{column}/_order.json`, a JSON array of filenames in display order. Without that file, cards are shown in whatever order the WebDAV server lists them.
 
