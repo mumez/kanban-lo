@@ -204,21 +204,39 @@ export async function loadAllIssues(): Promise<Issue[]> {
 }
 
 /**
+ * Read an optional JSON config file. A 404 returns `missing`. Invalid JSON
+ * and any other failure are thrown. `parse` decides what a present file means.
+ */
+async function loadOptionalConfigFile<T>(
+  filename: string,
+  parse: (text: string) => T,
+  missing: T
+): Promise<T> {
+  const client = getClient();
+  try {
+    const text = (await client.getFileContents(`/${filename}`, {
+      format: "text",
+    })) as string;
+    return parse(text);
+  } catch (err) {
+    rethrowUnlessNotFound(err);
+    return missing;
+  }
+}
+
+/** A JSON array, or none when the document is not an array. */
+function parseStringList(text: string): string[] {
+  const parsed: unknown = JSON.parse(text);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+/**
  * Load admin-maintained display settings from issues/_settings.json.
  * A missing file means "hide nothing" — every column is shown.
  * Invalid JSON and any non-404 failure are thrown.
  */
 export async function loadSettings(): Promise<BoardSettings> {
-  const client = getClient();
-  try {
-    const text = (await client.getFileContents(`/${SETTINGS_FILENAME}`, {
-      format: "text",
-    })) as string;
-    return parseSettings(text);
-  } catch (err) {
-    rethrowUnlessNotFound(err);
-    return { hiddenStatuses: [] };
-  }
+  return loadOptionalConfigFile(SETTINGS_FILENAME, parseSettings, { hiddenStatuses: [] });
 }
 
 /**
@@ -227,17 +245,7 @@ export async function loadSettings(): Promise<BoardSettings> {
  * Any other failure (e.g. unreachable server) is thrown.
  */
 export async function loadProjects(): Promise<string[]> {
-  const client = getClient();
-  try {
-    const text = (await client.getFileContents("/_projects.json", {
-      format: "text",
-    })) as string;
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    rethrowUnlessNotFound(err);
-    return [];
-  }
+  return loadOptionalConfigFile("_projects.json", parseStringList, []);
 }
 
 /**
@@ -247,14 +255,5 @@ export async function loadProjects(): Promise<string[]> {
  * Invalid JSON and any non-404 failure are thrown.
  */
 export async function loadSpecLevels(): Promise<string[] | null> {
-  const client = getClient();
-  try {
-    const text = (await client.getFileContents(`/${SPEC_LEVELS_FILENAME}`, {
-      format: "text",
-    })) as string;
-    return parseSpecLevels(text);
-  } catch (err) {
-    rethrowUnlessNotFound(err);
-    return null;
-  }
+  return loadOptionalConfigFile(SPEC_LEVELS_FILENAME, parseSpecLevels, null);
 }
