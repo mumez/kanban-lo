@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { COLUMNS, frontmatterOf, parseSettings, parseSpecLevels, visibleColumns } from "./issue-format";
+import {
+  aiReadySpecLevel,
+  COLUMNS,
+  frontmatterOf,
+  parseSettings,
+  parseSpecLevels,
+  visibleColumns,
+} from "./issue-format";
 
 describe("parseSettings", () => {
   it("hides nothing when hiddenStatuses is missing", () => {
@@ -63,6 +70,7 @@ describe("parseSpecLevels", () => {
       "utf8"
     );
     expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", "clear"]);
+    expect(aiReadySpecLevel(parseSpecLevels(shipped))).toBe("clear");
   });
 
   it("trims entries and drops non-strings and duplicates", () => {
@@ -80,6 +88,24 @@ describe("parseSpecLevels", () => {
 
   it("throws when the JSON is invalid", () => {
     expect(() => parseSpecLevels("{")).toThrow();
+  });
+});
+
+describe("aiReadySpecLevel", () => {
+  it("uses the last named choice, skipping the blank entry", () => {
+    expect(aiReadySpecLevel(["", "memo", "refining", "clear"])).toBe("clear");
+    expect(aiReadySpecLevel(["memo", "clear", ""])).toBe("clear");
+  });
+
+  it("follows a renamed or appended final choice", () => {
+    expect(aiReadySpecLevel(["", "memo", "ready"])).toBe("ready");
+    expect(aiReadySpecLevel(["", "memo", "refining", "clear", "polished"])).toBe("polished");
+  });
+
+  it("has no final choice when the file is absent or names none", () => {
+    expect(aiReadySpecLevel(null)).toBeUndefined();
+    expect(aiReadySpecLevel([])).toBeUndefined();
+    expect(aiReadySpecLevel([""])).toBeUndefined();
   });
 });
 

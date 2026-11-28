@@ -6,6 +6,7 @@ import { kanbanStore } from "../store/kanban";
 import * as dav from "../services/webdav";
 import { visibleLabel } from "../test/visible-label";
 import type { Issue } from "../types";
+import { AI_READY_LABEL } from "../lib/issue-format";
 
 vi.mock("../services/webdav");
 
@@ -29,17 +30,63 @@ function renderCard(cardIssue: Issue) {
   ));
 }
 
+async function useSpecLevels(levels: string[] | null) {
+  vi.mocked(dav.loadAllIssues).mockResolvedValue([]);
+  vi.mocked(dav.loadProjects).mockResolvedValue([]);
+  vi.mocked(dav.loadSettings).mockResolvedValue({ hiddenStatuses: [] });
+  vi.mocked(dav.loadSpecLevels).mockResolvedValue(levels);
+  await kanbanStore.reload();
+}
+
 describe("IssueCard", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     kanbanStore.closeModal();
     kanbanStore.closeViewModal();
+    await useSpecLevels(["", "memo", "refining", "clear"]);
   });
 
   it("renders the subject and content", () => {
     renderCard(issue);
     expect(screen.getByText("Fix bug")).toBeInTheDocument();
     expect(screen.getByText("Details here")).toBeInTheDocument();
+  });
+
+  it("shows an AI ready sparkle when the spec level is the last named choice", () => {
+    renderCard({ ...issue, specLevel: "clear" });
+    expect(screen.getByRole("img", { name: AI_READY_LABEL })).toBeInTheDocument();
+  });
+
+  it("follows a renamed final choice and leaves the old name unmarked", async () => {
+    await useSpecLevels(["", "memo", "ready"]);
+
+    renderCard({ ...issue, specLevel: "ready" });
+    expect(screen.getByRole("img", { name: AI_READY_LABEL })).toBeInTheDocument();
+
+    renderCard({ ...issue, id: "1-old-clear", specLevel: "clear" });
+    expect(screen.getAllByRole("img", { name: AI_READY_LABEL })).toHaveLength(1);
+  });
+
+  it("does not show an AI ready sparkle for an earlier spec level", () => {
+    renderCard({ ...issue, specLevel: "refining" });
+    expect(screen.queryByRole("img", { name: AI_READY_LABEL })).not.toBeInTheDocument();
+  });
+
+  it("does not show an AI ready sparkle when the choice file is absent", async () => {
+    await useSpecLevels(null);
+    renderCard({ ...issue, specLevel: "clear" });
+    expect(screen.queryByRole("img", { name: AI_READY_LABEL })).not.toBeInTheDocument();
+  });
+
+  it("does not mark an unset issue when the choice file is absent", async () => {
+    await useSpecLevels(null);
+    renderCard(issue);
+    expect(screen.queryByRole("img", { name: AI_READY_LABEL })).not.toBeInTheDocument();
+  });
+
+  it("does not show an AI ready sparkle when the spec level is unset", () => {
+    renderCard(issue);
+    expect(screen.queryByRole("img", { name: AI_READY_LABEL })).not.toBeInTheDocument();
   });
 
   it("links the pull request in a new tab when a PR URL is set", () => {
