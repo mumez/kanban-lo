@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import {
-  AI_READY_SPEC_LEVEL,
+  aiReadySpecLevel,
   COLUMNS,
   frontmatterOf,
   parseSettings,
@@ -69,7 +69,8 @@ describe("parseSpecLevels", () => {
       join(dirname(fileURLToPath(import.meta.url)), "../../../issues/_specLevels.json"),
       "utf8"
     );
-    expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", AI_READY_SPEC_LEVEL]);
+    expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", "clear"]);
+    expect(aiReadySpecLevel(parseSpecLevels(shipped))).toBe("clear");
   });
 
   it("trims entries and drops non-strings and duplicates", () => {
@@ -87,6 +88,24 @@ describe("parseSpecLevels", () => {
 
   it("throws when the JSON is invalid", () => {
     expect(() => parseSpecLevels("{")).toThrow();
+  });
+});
+
+describe("aiReadySpecLevel", () => {
+  it("uses the last named choice, skipping the blank entry", () => {
+    expect(aiReadySpecLevel(["", "memo", "refining", "clear"])).toBe("clear");
+    expect(aiReadySpecLevel(["memo", "clear", ""])).toBe("clear");
+  });
+
+  it("follows a renamed or appended final choice", () => {
+    expect(aiReadySpecLevel(["", "memo", "ready"])).toBe("ready");
+    expect(aiReadySpecLevel(["", "memo", "refining", "clear", "polished"])).toBe("polished");
+  });
+
+  it("has no final choice when the file is absent or names none", () => {
+    expect(aiReadySpecLevel(null)).toBeUndefined();
+    expect(aiReadySpecLevel([])).toBeUndefined();
+    expect(aiReadySpecLevel([""])).toBeUndefined();
   });
 });
 

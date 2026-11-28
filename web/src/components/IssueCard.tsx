@@ -1,7 +1,7 @@
 import { type Component, Show } from "solid-js";
 import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
-import { AI_READY_LABEL, AI_READY_SPEC_LEVEL } from "../lib/issue-format";
+import { AI_READY_LABEL, aiReadySpecLevel } from "../lib/issue-format";
 import { kanbanStore } from "../store/kanban";
 import IssueProjectRow from "./IssueProjectRow";
 
@@ -24,7 +24,12 @@ const IssueCard: Component<Props> = (props) => {
           <h3 class="card-title min-w-0 flex-1 text-sm font-semibold leading-snug break-words">
             {props.issue.subject}
           </h3>
-          <Show when={props.issue.specLevel === AI_READY_SPEC_LEVEL}>
+          <Show
+            when={
+              props.issue.specLevel !== undefined &&
+              props.issue.specLevel === aiReadySpecLevel(kanbanStore.specLevels)
+            }
+          >
             <span
               class="badge badge-warning mt-0.5 shrink-0 px-1"
               role="img"

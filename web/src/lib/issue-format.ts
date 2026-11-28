@@ -51,16 +51,24 @@ export function visibleColumns(hiddenStatuses: readonly string[]): Column[] {
 
 export const SPEC_LEVELS_FILENAME = "_specLevels.json";
 
-/**
- * `specLevel` value the board treats as AI ready. The shipped
- * `_specLevels.json` includes it, but that file does not define the meaning:
- * a card shows a sparkle only when its specLevel equals this string. A
- * renamed choice is a different level, and the sparkle stays tied to `clear`.
- */
-export const AI_READY_SPEC_LEVEL = "clear";
-
 /** Name the sparkle exposes on hover and to assistive tech. */
 export const AI_READY_LABEL = "AI ready";
+
+/**
+ * The spec level the board treats as AI ready: the last named choice in
+ * `issues/_specLevels.json`. The blank choice `""` is "(none)", not a level,
+ * so a trailing blank is skipped. `null` (the file is absent) and a list
+ * with no named choice have no final level, and no card shows a sparkle.
+ * Renaming or appending a choice moves the sparkle to whatever named entry
+ * is last.
+ */
+export function aiReadySpecLevel(levels: readonly string[] | null): string | undefined {
+  if (levels === null) return undefined;
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (levels[i] !== "") return levels[i];
+  }
+  return undefined;
+}
 
 /**
  * Parse `issues/_specLevels.json`, a JSON array of spec-level names for the

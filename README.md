@@ -91,7 +91,7 @@ The edit form's Spec Level field lists the choices in `issues/_specLevels.json` 
 
 `""` is the blank choice, shown as "(none)". The Web UI only reads this file. Delete it to type a spec level freely. `kbl` does not read it, so `--spec-level` still accepts any string.
 
-A card whose `specLevel` is `clear` shows a sparkle: the spec is clear and the issue is AI ready. That string is a convention (`AI_READY_SPEC_LEVEL` in `web/src/lib/issue-format.ts`). The choices file does not define it. A renamed entry in `_specLevels.json` is a different level, and the sparkle stays tied to `clear`, so the icon disappears with no other indication.
+A card shows a sparkle when its `specLevel` equals the last named choice in that file: the spec has reached its final level and the issue is AI ready. The shipped list ends with `clear`, so that is the final level today. Appending or renaming the last entry moves the sparkle with it. The blank choice `""` is "(none)", not a level, and is skipped. With the file deleted there is no final level, so no card shows a sparkle.
 
 Card order within a column is optional: dragging cards writes it to `issues/{column}/_order.json`, a JSON array of filenames in display order. Without that file, cards are shown in whatever order the WebDAV server lists them.
 
