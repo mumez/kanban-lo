@@ -1,15 +1,13 @@
 import { type Component, Show } from "solid-js";
 import { createSortable } from "@thisbeyond/solid-dnd";
 import type { Issue } from "../types";
+import { AI_READY_LABEL, AI_READY_SPEC_LEVEL } from "../lib/issue-format";
 import { kanbanStore } from "../store/kanban";
 import IssueProjectRow from "./IssueProjectRow";
 
 interface Props {
   issue: Issue;
 }
-
-/** Spec level that means the specification is clear and the issue is ready for an AI agent. */
-const AI_READY_SPEC_LEVEL = "clear";
 
 const IssueCard: Component<Props> = (props) => {
   const sortable = createSortable(props.issue.id, { subject: props.issue.subject });
@@ -30,8 +28,8 @@ const IssueCard: Component<Props> = (props) => {
             <span
               class="badge badge-warning mt-0.5 shrink-0 px-1"
               role="img"
-              aria-label="AI ready"
-              title="AI ready"
+              aria-label={AI_READY_LABEL}
+              title={AI_READY_LABEL}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

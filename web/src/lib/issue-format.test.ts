@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { COLUMNS, frontmatterOf, parseSettings, parseSpecLevels, visibleColumns } from "./issue-format";
+import {
+  AI_READY_SPEC_LEVEL,
+  COLUMNS,
+  frontmatterOf,
+  parseSettings,
+  parseSpecLevels,
+  visibleColumns,
+} from "./issue-format";
 
 describe("parseSettings", () => {
   it("hides nothing when hiddenStatuses is missing", () => {
@@ -62,7 +69,7 @@ describe("parseSpecLevels", () => {
       join(dirname(fileURLToPath(import.meta.url)), "../../../issues/_specLevels.json"),
       "utf8"
     );
-    expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", "clear"]);
+    expect(parseSpecLevels(shipped)).toEqual(["", "memo", "refining", AI_READY_SPEC_LEVEL]);
   });
 
   it("trims entries and drops non-strings and duplicates", () => {
