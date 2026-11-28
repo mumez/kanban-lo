@@ -42,6 +42,21 @@ describe("IssueCard", () => {
     expect(screen.getByText("Details here")).toBeInTheDocument();
   });
 
+  it("shows an AI ready sparkle when the spec level is clear", () => {
+    renderCard({ ...issue, specLevel: "clear" });
+    expect(screen.getByRole("img", { name: "AI ready" })).toBeInTheDocument();
+  });
+
+  it("does not show an AI ready sparkle for another spec level", () => {
+    renderCard({ ...issue, specLevel: "refining" });
+    expect(screen.queryByRole("img", { name: "AI ready" })).not.toBeInTheDocument();
+  });
+
+  it("does not show an AI ready sparkle when the spec level is unset", () => {
+    renderCard(issue);
+    expect(screen.queryByRole("img", { name: "AI ready" })).not.toBeInTheDocument();
+  });
+
   it("links the pull request in a new tab when a PR URL is set", () => {
     renderCard({ ...issue, pr: "https://github.com/org/repo/pull/12" });
 
